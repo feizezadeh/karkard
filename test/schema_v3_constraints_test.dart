@@ -1,7 +1,19 @@
 import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:karkard/core/domain_exception.dart';
+import 'package:karkard/core/error_mapper.dart';
 import 'package:karkard/data/database.dart';
+
+Future<void> expectDbThrowsDomainCode(Future<void> Function() action, String expectedCode) async {
+  try {
+    await action();
+    fail('Expected DB to throw $expectedCode, but succeeded');
+  } catch (e) {
+    final domain = mapSqliteException(e);
+    expect(domain.code, expectedCode);
+  }
+}
 
 Future<AppDatabase> newDb() async {
   final db = AppDatabase(NativeDatabase.memory());
@@ -59,6 +71,7 @@ void main() {
         amount: 100,
         date: '2025-03-20',
         cashAccountId: const Value('acc_proj'),
+        clientId: const Value('cli1'),
       ));
       final row = await (db.select(db.transactions)..where((t) => t.id.equals('t_ok'))).getSingle();
       expect(row.amount, 100);
@@ -66,11 +79,11 @@ void main() {
 
     test('negative: typeof(amount) float 12.5 and string 100 rejected', () async {
       expect(
-        db.customStatement("INSERT INTO transactions (id, project_id, type, amount, date, cash_account_id) VALUES ('f1', 'p1', 'income', 12.5, '2025-03-20', 'acc_proj')"),
+        db.customStatement("INSERT INTO transactions (id, project_id, type, amount, date, cash_account_id, client_id) VALUES ('f1', 'p1', 'income', 12.5, '2025-03-20', 'acc_proj', 'cli1')"),
         throwsA(anything),
       );
       expect(
-        db.customStatement("INSERT INTO transactions (id, project_id, type, amount, date, cash_account_id) VALUES ('f2', 'p1', 'income', '100', '2025-03-20', 'acc_proj')"),
+        db.customStatement("INSERT INTO transactions (id, project_id, type, amount, date, cash_account_id, client_id) VALUES ('f2', 'p1', 'income', '100', '2025-03-20', 'acc_proj', 'cli1')"),
         throwsA(anything),
       );
     });
@@ -216,8 +229,8 @@ void main() {
     });
   });
 
-  group('Constraint 7: income cash_account_id mandatory', () {
-    test('positive: income with cash_account_id accepted', () async {
+  group('Constraint 7: income cash_account_id and client_id mandatory', () {
+    test('positive: income with cash_account_id and client_id accepted', () async {
       await db.into(db.transactions).insert(TransactionsCompanion.insert(
         id: 'inc1',
         projectId: 'p1',
@@ -225,9 +238,11 @@ void main() {
         amount: 5000,
         date: '2025-03-20',
         cashAccountId: const Value('acc_proj'),
+        clientId: const Value('cli1'),
       ));
       final r = await (db.select(db.transactions)..where((t) => t.id.equals('inc1'))).getSingle();
       expect(r.cashAccountId, 'acc_proj');
+      expect(r.clientId, 'cli1');
     });
 
     test('negative: income without cash_account_id rejected', () async {
@@ -239,6 +254,37 @@ void main() {
           amount: 5000,
           date: '2025-03-20',
           cashAccountId: const Value(null),
+          clientId: const Value('cli1'),
+        )),
+        throwsA(anything),
+      );
+    });
+
+    test('negative: income without client_id rejected', () async {
+      expect(
+        db.into(db.transactions).insert(TransactionsCompanion.insert(
+          id: 'inc_no_cli',
+          projectId: 'p1',
+          type: 'income',
+          amount: 5000,
+          date: '2025-03-20',
+          cashAccountId: const Value('acc_proj'),
+          clientId: const Value(null),
+        )),
+        throwsA(anything),
+      );
+    });
+
+    test('negative: income with client_id having kind != client rejected by trigger', () async {
+      expect(
+        db.into(db.transactions).insert(TransactionsCompanion.insert(
+          id: 'inc_wrong_cli_kind',
+          projectId: 'p1',
+          type: 'income',
+          amount: 5000,
+          date: '2025-03-20',
+          cashAccountId: const Value('acc_proj'),
+          clientId: const Value('drv1'), // drv1 is driver, not client
         )),
         throwsA(anything),
       );
@@ -554,13 +600,13 @@ void main() {
       );
     });
 
-    test('demote settlement_mode: positive without transactions succeeds, negative with transactions rejected', () async {
-      // 1. Demoting prt2 (no tx referencing prt2 yet) to payout_only succeeds
+    test('positive: demoting settlement_mode to payout_only without transactions succeeds', () async {
       await db.customStatement("UPDATE project_persons SET settlement_mode='payout_only' WHERE project_id='p1' AND person_id='prt2'");
       final p2 = await (db.select(db.projectPersons)..where((p) => p.personId.equals('prt2'))).getSingle();
       expect(p2.settlementMode, 'payout_only');
+    });
 
-      // 2. Add tx referencing prt1
+    test('negative: demoting settlement_mode to payout_only with transactions rejected by trigger', () async {
       await db.into(db.transactions).insert(TransactionsCompanion.insert(
         id: 'tx_ref_prt1',
         projectId: 'p1',
@@ -571,7 +617,6 @@ void main() {
         performedBy: const Value('prt1'),
       ));
 
-      // 3. Demoting prt1 to payout_only now rejected by trigger
       expect(
         db.customStatement("UPDATE project_persons SET settlement_mode='payout_only' WHERE project_id='p1' AND person_id='prt1'"),
         throwsA(anything),
@@ -697,9 +742,9 @@ void main() {
       expect(remaining.isEmpty, isTrue);
     });
 
-    test('negative: deleting person when active tx references person_id rejected', () async {
+    test('Constraint 16a: negative: deleting person when active tx references person_id rejected', () async {
       await db.into(db.transactions).insert(TransactionsCompanion.insert(
-        id: 'tx_ref_drv1',
+        id: 'tx_ref_drv1_del',
         projectId: 'p1',
         type: 'work_out',
         amount: 500,
@@ -707,9 +752,146 @@ void main() {
         personId: const Value('drv1'),
       ));
 
-      expect(
-        db.customStatement("DELETE FROM project_persons WHERE project_id='p1' AND person_id='drv1'"),
-        throwsA(anything),
+      await expectDbThrowsDomainCode(
+        () => db.customStatement("DELETE FROM project_persons WHERE project_id='p1' AND person_id='drv1'"),
+        DomainErrors.cannotDeletePersonWithTransactions,
+      );
+    });
+
+    test('Constraint 16b: negative: deleting person when active tx references performed_by rejected', () async {
+      await db.into(db.transactions).insert(TransactionsCompanion.insert(
+        id: 'tx_ref_prt1_perf_del',
+        projectId: 'p1',
+        type: 'work_in',
+        amount: 1000,
+        date: '2025-03-20',
+        clientId: const Value('cli1'),
+        performedBy: const Value('prt1'),
+      ));
+
+      await expectDbThrowsDomainCode(
+        () => db.customStatement("DELETE FROM project_persons WHERE project_id='p1' AND person_id='prt1'"),
+        DomainErrors.cannotDeletePersonWithTransactions,
+      );
+    });
+
+    test('Constraint 16c: negative: deleting person when active tx references attributed_to rejected', () async {
+      await db.into(db.transactions).insert(TransactionsCompanion.insert(
+        id: 'tx_ref_prt2_attr_del',
+        projectId: 'p1',
+        type: 'work_out',
+        amount: 300,
+        date: '2025-03-20',
+        personId: const Value('drv1'),
+        attributedTo: const Value('prt2'),
+      ));
+
+      await expectDbThrowsDomainCode(
+        () => db.customStatement("DELETE FROM project_persons WHERE project_id='p1' AND person_id='prt2'"),
+        DomainErrors.cannotDeletePersonWithTransactions,
+      );
+    });
+  });
+
+  group('Constraint 19: UPDATE PK of project_persons forbidden when active tx references person', () {
+    test('positive: updating person_id/project_id when no active tx references person succeeds', () async {
+      await db.into(db.persons).insert(PersonsCompanion.insert(id: 'p_free', name: 'شخص آزاد', kind: 'driver'));
+      await db.into(db.persons).insert(PersonsCompanion.insert(id: 'p_free2', name: 'شخص آزاد ۲', kind: 'driver'));
+      await db.into(db.projectPersons).insert(ProjectPersonsCompanion.insert(
+        projectId: 'p1',
+        personId: 'p_free',
+        settlementMode: const Value('payout_only'),
+      ));
+
+      await db.customStatement("UPDATE project_persons SET person_id='p_free2' WHERE project_id='p1' AND person_id='p_free'");
+      final updated = await (db.select(db.projectPersons)
+            ..where((pp) => pp.projectId.equals('p1') & pp.personId.equals('p_free2')))
+          .getSingle();
+      expect(updated.personId, 'p_free2');
+    });
+
+    test('negative: updating person_id when active tx references person rejected by trigger', () async {
+      await db.into(db.transactions).insert(TransactionsCompanion.insert(
+        id: 'tx_ref_drv1_pk',
+        projectId: 'p1',
+        type: 'work_out',
+        amount: 500,
+        date: '2025-03-20',
+        personId: const Value('drv1'),
+      ));
+
+      await expectDbThrowsDomainCode(
+        () => db.customStatement("UPDATE project_persons SET person_id='outsider' WHERE project_id='p1' AND person_id='drv1'"),
+        DomainErrors.cannotUpdateProjectPersonPkWithTx,
+      );
+    });
+
+    test('negative: updating project_id when active tx references person rejected by trigger', () async {
+      await db.into(db.projects).insert(ProjectsCompanion.insert(id: 'p2', name: 'پروژه ۲'));
+      await db.into(db.transactions).insert(TransactionsCompanion.insert(
+        id: 'tx_ref_prt1_proj_pk',
+        projectId: 'p1',
+        type: 'work_in',
+        amount: 800,
+        date: '2025-03-20',
+        clientId: const Value('cli1'),
+        performedBy: const Value('prt1'),
+      ));
+
+      await expectDbThrowsDomainCode(
+        () => db.customStatement("UPDATE project_persons SET project_id='p2' WHERE project_id='p1' AND person_id='prt1'"),
+        DomainErrors.cannotUpdateProjectPersonPkWithTx,
+      );
+    });
+  });
+
+  group('Constraint 20: demote settlement_mode to profit_share forbidden when work_out or settle_payable payout exists', () {
+    test('positive: demoting settlement_mode to profit_share when no work_out/settle_payable exists succeeds', () async {
+      await db.into(db.persons).insert(PersonsCompanion.insert(id: 'p_demo', name: 'شخص دمو', kind: 'worker'));
+      await db.into(db.projectPersons).insert(ProjectPersonsCompanion.insert(
+        projectId: 'p1',
+        personId: 'p_demo',
+        settlementMode: const Value('payout_only'),
+      ));
+
+      await db.customStatement("UPDATE project_persons SET settlement_mode='profit_share', share_bp=100 WHERE project_id='p1' AND person_id='p_demo'");
+      final res = await (db.select(db.projectPersons)
+            ..where((pp) => pp.projectId.equals('p1') & pp.personId.equals('p_demo')))
+          .getSingle();
+      expect(res.settlementMode, 'profit_share');
+    });
+
+    test('negative: demoting payout_only to profit_share with active work_out rejected by trigger', () async {
+      await db.into(db.transactions).insert(TransactionsCompanion.insert(
+        id: 'tx_ref_drv1_wo',
+        projectId: 'p1',
+        type: 'work_out',
+        amount: 500,
+        date: '2025-03-20',
+        personId: const Value('drv1'),
+      ));
+
+      await expectDbThrowsDomainCode(
+        () => db.customStatement("UPDATE project_persons SET settlement_mode='profit_share', share_bp=100 WHERE project_id='p1' AND person_id='drv1'"),
+        DomainErrors.cannotDemotePayoutPartnerWithTx,
+      );
+    });
+
+    test('negative: demoting payout_only to profit_share with active settle_payable payout rejected by trigger', () async {
+      await db.into(db.transactions).insert(TransactionsCompanion.insert(
+        id: 'tx_ref_drv1_pay',
+        projectId: 'p1',
+        type: 'payout',
+        amount: 400,
+        date: '2025-03-20',
+        personId: const Value('drv1'),
+        cashAccountId: const Value('acc_proj'),
+        purpose: const Value('settle_payable'),
+      ));
+
+      await expectDbThrowsDomainCode(
+        () => db.customStatement("UPDATE project_persons SET settlement_mode='profit_share', share_bp=100 WHERE project_id='p1' AND person_id='drv1'"),
+        DomainErrors.cannotDemotePayoutPartnerWithTx,
       );
     });
   });
@@ -760,6 +942,7 @@ void main() {
         amount: 200,
         date: '2025-03-20',
         cashAccountId: const Value('acc_proj'),
+        clientId: const Value('cli1'),
       ));
 
       await db.customStatement(
@@ -794,9 +977,9 @@ void main() {
       await db.customStatement("UPDATE project_settings SET report_basis='cash' WHERE project_id='p1'");
 
       // 4. Attempt to undelete distribution -> throws
-      expect(
-        db.customStatement("UPDATE transactions SET deleted_at=NULL, deleted_reason=NULL WHERE id='dist_to_undelete'"),
-        throwsA(anything),
+      await expectDbThrowsDomainCode(
+        () => db.customStatement("UPDATE transactions SET deleted_at=NULL, deleted_reason=NULL WHERE id='dist_to_undelete'"),
+        DomainErrors.txUndeleteForbidden,
       );
     });
   });

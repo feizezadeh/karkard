@@ -53,7 +53,7 @@ Future<void> tx(
           amount: amount,
           date: date,
           cashAccountId: Value(cashAccountId),
-          clientId: Value(clientId),
+          clientId: Value(clientId ?? ((type == 'income' || type == 'work_in') ? 'cli' : null)),
           personId: Value(personId),
           purpose: Value(purpose),
         ));
@@ -158,7 +158,10 @@ void main() {
         'trg_project_persons_lock_update',
         'trg_project_persons_lock_delete',
         'trg_project_persons_no_demote_with_tx',
+        'trg_project_persons_no_demote_payout_with_tx',
+        'trg_project_persons_no_update_pk_with_tx',
         'trg_project_persons_no_delete_with_tx',
+        'trg_persons_no_update_kind_with_tx',
         'trg_app_settings_no_update_key',
         'trg_app_settings_unit_immutable',
         'trg_app_settings_unit_no_delete',
@@ -186,7 +189,7 @@ void main() {
       // Raw SQL check with real float 12.5 -> must fail CHECK (typeof(amount)='integer')
       expect(
         db.customStatement(
-          "INSERT INTO transactions (id, project_id, type, amount, date, cash_account_id) VALUES ('t_flt', 'open1', 'income', 12.5, '2025-03-20', 'c1')",
+          "INSERT INTO transactions (id, project_id, type, amount, date, cash_account_id, client_id) VALUES ('t_flt', 'open1', 'income', 12.5, '2025-03-20', 'c1', 'cli')",
         ),
         throwsA(anything),
       );
@@ -194,7 +197,7 @@ void main() {
       // Raw SQL check with text '100' -> must fail CHECK (typeof(amount)='integer')
       expect(
         db.customStatement(
-          "INSERT INTO transactions (id, project_id, type, amount, date, cash_account_id) VALUES ('t_str', 'open1', 'income', '100', '2025-03-20', 'c1')",
+          "INSERT INTO transactions (id, project_id, type, amount, date, cash_account_id, client_id) VALUES ('t_str', 'open1', 'income', '100', '2025-03-20', 'c1', 'cli')",
         ),
         throwsA(anything),
       );
@@ -287,6 +290,28 @@ void main() {
     });
     test('lock d) insert tx in locked project throws', () async {
       expect(tx(db, 't9', 'lock1'), throwsA(anything));
+    });
+    test('lock e) editing amount in locked project throws', () async {
+      // First insert while open
+      await tx(db, 't_to_lock', 'open1');
+      // Lock project
+      await db.customStatement("UPDATE projects SET status='locked' WHERE id='open1'");
+      // Editing amount must throw
+      expect(
+        db.customStatement("UPDATE transactions SET amount=9999 WHERE id='t_to_lock'"),
+        throwsA(anything),
+      );
+    });
+    test('lock f) soft-deleting tx in locked project throws', () async {
+      // First insert while open
+      await tx(db, 't_soft_lock', 'open1');
+      // Lock project
+      await db.customStatement("UPDATE projects SET status='locked' WHERE id='open1'");
+      // Soft-deleting must throw
+      expect(
+        db.customStatement("UPDATE transactions SET deleted_at='2025-03-20T10:00:00Z', deleted_reason='test' WHERE id='t_soft_lock'"),
+        throwsA(anything),
+      );
     });
   });
 

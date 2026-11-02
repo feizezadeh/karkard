@@ -55,6 +55,27 @@ DomainException mapSqliteException(Object error) {
     );
   }
 
+  if (msg.contains('ERR_PROJECT_LOCKED_TX') ||
+      msg.contains('trg_tx_no_insert_locked') ||
+      msg.contains('trg_tx_no_update_locked') ||
+      msg.contains('project is locked: cannot insert transaction') ||
+      msg.contains('project is locked: cannot update transaction')) {
+    return const DomainException(
+      DomainErrors.projectLockedTx,
+      'project is locked: transaction mutations forbidden',
+    );
+  }
+
+  if (msg.contains('ERR_PROJECT_LOCKED_RECEIPTS') ||
+      msg.contains('trg_receipts_no_insert_locked') ||
+      msg.contains('trg_receipts_no_delete_locked') ||
+      msg.contains('locked project') && msg.contains('receipt')) {
+    return const DomainException(
+      DomainErrors.projectLockedReceipts,
+      'project is locked: receipt mutations forbidden',
+    );
+  }
+
   if (msg.contains('ERR_PROJECT_SETTINGS_LOCKED') ||
       msg.contains('trg_project_settings_lock')) {
     return const DomainException(
@@ -76,6 +97,22 @@ DomainException mapSqliteException(Object error) {
     return const DomainException(
       DomainErrors.cannotDemotePartnerWithTransactions,
       'cannot change settlement_mode to payout_only when transactions reference this partner',
+    );
+  }
+
+  if (msg.contains('ERR_CANNOT_DEMOTE_PAYOUT_PARTNER_WITH_TX') ||
+      msg.contains('trg_project_persons_no_demote_payout_with_tx')) {
+    return const DomainException(
+      DomainErrors.cannotDemotePayoutPartnerWithTx,
+      'cannot change settlement_mode to profit_share when active work_out or settle_payable payout transactions reference this person',
+    );
+  }
+
+  if (msg.contains('ERR_CANNOT_UPDATE_PROJECT_PERSON_PK_WITH_TX') ||
+      msg.contains('trg_project_persons_no_update_pk_with_tx')) {
+    return const DomainException(
+      DomainErrors.cannotUpdateProjectPersonPkWithTx,
+      'cannot change project_id or person_id of project_person when active transactions reference this person',
     );
   }
 
@@ -180,6 +217,14 @@ DomainException mapSqliteException(Object error) {
     );
   }
 
+  if (msg.contains('chk_tx_income_client_required') ||
+      msg.contains('ERR_INCOME_MISSING_CLIENT')) {
+    return const DomainException(
+      DomainErrors.incomeMissingClient,
+      'income requires client_id',
+    );
+  }
+
   if (msg.contains('chk_tx_work_in_client_required') ||
       msg.contains('ERR_WORK_IN_MISSING_CLIENT') ||
       msg.contains('client_id IS NOT NULL')) {
@@ -212,6 +257,22 @@ DomainException mapSqliteException(Object error) {
     return const DomainException(
       DomainErrors.personalAccountMissingHolder,
       'personal cash account requires holder_person_id',
+    );
+  }
+
+  if (msg.contains('chk_cash_account_project_holder_null') ||
+      msg.contains('ERR_PROJECT_ACCOUNT_HAS_HOLDER')) {
+    return const DomainException(
+      DomainErrors.projectAccountHasHolder,
+      'project cash account cannot have a holder_person_id',
+    );
+  }
+
+  if (msg.contains('ERR_CANNOT_CHANGE_PERSON_KIND_WITH_TX') ||
+      msg.contains('trg_persons_no_update_kind_with_tx')) {
+    return const DomainException(
+      DomainErrors.cannotChangePersonKindWithTx,
+      'cannot change kind of person referenced by active transactions',
     );
   }
 

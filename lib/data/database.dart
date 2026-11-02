@@ -6,6 +6,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:sqlite3/sqlite3.dart' show Database;
 
+import '../core/domain_exception.dart';
 import 'tables.dart';
 
 part 'database.g.dart';
@@ -27,10 +28,14 @@ const schemaVersionV2 = 2;
 class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
 
+  static Future<File> getDatabaseFile() async {
+    final dir = await getApplicationDocumentsDirectory();
+    return File(p.join(dir.path, 'karkard', 'karkard.db'));
+  }
+
   /// File-backed DB in the app documents dir: WAL + foreign keys ON.
   static Future<AppDatabase> openFile() async {
-    final dir = await getApplicationDocumentsDirectory();
-    final file = File(p.join(dir.path, 'karkard', 'karkard.db'));
+    final file = await getDatabaseFile();
     await file.parent.create(recursive: true);
     return forFile(file);
   }
@@ -60,8 +65,7 @@ class AppDatabase extends _$AppDatabase {
         },
         onUpgrade: (m, from, to) async {
           if (from < 2) {
-            throw UnsupportedError(
-                'Migration from schema v$from to v$to is not supported: pre-release schema change');
+            throw LegacyDatabaseException(fromVersion: from, toVersion: to);
           }
         },
         beforeOpen: (details) async {
@@ -80,7 +84,7 @@ const _triggers = <String>[
   '''
 CREATE TRIGGER trg_tx_no_insert_locked BEFORE INSERT ON transactions
 WHEN (SELECT status FROM projects WHERE id = NEW.project_id) = 'locked'
-BEGIN SELECT RAISE(ABORT, 'project is locked: cannot insert transaction'); END;''',
+BEGIN SELECT RAISE(ABORT, 'ERR_PROJECT_LOCKED_TX: project is locked: cannot insert transaction'); END;''',
 
   // locked project: no update (soft delete is an update); also blocks moving
   // a tx out of a locked project
@@ -88,7 +92,7 @@ BEGIN SELECT RAISE(ABORT, 'project is locked: cannot insert transaction'); END;'
 CREATE TRIGGER trg_tx_no_update_locked BEFORE UPDATE ON transactions
 WHEN (SELECT status FROM projects WHERE id = OLD.project_id) = 'locked'
   OR (SELECT status FROM projects WHERE id = NEW.project_id) = 'locked'
-BEGIN SELECT RAISE(ABORT, 'project is locked: cannot update transaction'); END;''',
+BEGIN SELECT RAISE(ABORT, 'ERR_PROJECT_LOCKED_TX: project is locked: cannot update transaction'); END;''',
 
   // no hard delete, ever
   '''
@@ -119,7 +123,7 @@ WHEN (
   JOIN transactions t ON t.project_id = p.id
   WHERE t.id = NEW.transaction_id
 ) = 'locked'
-BEGIN SELECT RAISE(ABORT, 'cannot add receipt to a transaction in a locked project'); END;''',
+BEGIN SELECT RAISE(ABORT, 'ERR_PROJECT_LOCKED_RECEIPTS: cannot add receipt to a transaction in a locked project'); END;''',
 
   // receipts: no delete for transaction in locked project
   '''
@@ -129,17 +133,17 @@ WHEN (
   JOIN transactions t ON t.project_id = p.id
   WHERE t.id = OLD.transaction_id
 ) = 'locked'
-BEGIN SELECT RAISE(ABORT, 'cannot delete receipt from a transaction in a locked project'); END;''',
+BEGIN SELECT RAISE(ABORT, 'ERR_PROJECT_LOCKED_RECEIPTS: cannot delete receipt from a transaction in a locked project'); END;''',
 
-  // client_id on work_in must have kind = 'client'
+  // client_id on work_in and income must have kind = 'client'
   '''
 CREATE TRIGGER trg_tx_check_client_kind_insert BEFORE INSERT ON transactions
-WHEN NEW.type = 'work_in' AND (SELECT kind FROM persons WHERE id = NEW.client_id) != 'client'
+WHEN (NEW.type IN ('work_in', 'income')) AND (SELECT kind FROM persons WHERE id = NEW.client_id) != 'client'
 BEGIN SELECT RAISE(ABORT, 'ERR_CLIENT_KIND_MISMATCH: client_id must have kind=client'); END;''',
 
   '''
 CREATE TRIGGER trg_tx_check_client_kind_update BEFORE UPDATE OF client_id, type ON transactions
-WHEN NEW.type = 'work_in' AND (SELECT kind FROM persons WHERE id = NEW.client_id) != 'client'
+WHEN (NEW.type IN ('work_in', 'income')) AND (SELECT kind FROM persons WHERE id = NEW.client_id) != 'client'
 BEGIN SELECT RAISE(ABORT, 'ERR_CLIENT_KIND_MISMATCH: client_id must have kind=client'); END;''',
 
   // payout.person_id must be registered in project_persons
@@ -283,6 +287,39 @@ WHEN NEW.settlement_mode = 'payout_only' AND EXISTS (
     AND deleted_at IS NULL
 )
 BEGIN SELECT RAISE(ABORT, 'ERR_CANNOT_DEMOTE_PARTNER_WITH_TRANSACTIONS: cannot change settlement_mode to payout_only when transactions reference this partner'); END;''',
+
+  // cannot demote settlement_mode to profit_share if active work_out or payout(settle_payable) reference this person
+  '''
+CREATE TRIGGER trg_project_persons_no_demote_payout_with_tx BEFORE UPDATE OF settlement_mode ON project_persons
+WHEN NEW.settlement_mode = 'profit_share' AND OLD.settlement_mode IN ('payout_only', 'both') AND EXISTS (
+  SELECT 1 FROM transactions
+  WHERE project_id = OLD.project_id
+    AND person_id = OLD.person_id
+    AND (type = 'work_out' OR (type = 'payout' AND purpose = 'settle_payable'))
+    AND deleted_at IS NULL
+)
+BEGIN SELECT RAISE(ABORT, 'ERR_CANNOT_DEMOTE_PAYOUT_PARTNER_WITH_TX: cannot change settlement_mode to profit_share when active work_out or settle_payable payout transactions reference this person'); END;''',
+
+  // cannot update primary key (project_id or person_id) of project_persons if active transactions reference this person
+  '''
+CREATE TRIGGER trg_project_persons_no_update_pk_with_tx BEFORE UPDATE OF project_id, person_id ON project_persons
+WHEN (OLD.project_id != NEW.project_id OR OLD.person_id != NEW.person_id) AND EXISTS (
+  SELECT 1 FROM transactions
+  WHERE project_id = OLD.project_id
+    AND (person_id = OLD.person_id OR performed_by = OLD.person_id OR attributed_to = OLD.person_id)
+    AND deleted_at IS NULL
+)
+BEGIN SELECT RAISE(ABORT, 'ERR_CANNOT_UPDATE_PROJECT_PERSON_PK_WITH_TX: cannot change project_id or person_id of project_person when active transactions reference this person'); END;''',
+
+  // cannot update kind of person if active transactions reference this person
+  '''
+CREATE TRIGGER trg_persons_no_update_kind_with_tx BEFORE UPDATE OF kind ON persons
+WHEN OLD.kind != NEW.kind AND EXISTS (
+  SELECT 1 FROM transactions
+  WHERE (client_id = OLD.id OR person_id = OLD.id OR performed_by = OLD.id OR attributed_to = OLD.id)
+    AND deleted_at IS NULL
+)
+BEGIN SELECT RAISE(ABORT, 'ERR_CANNOT_CHANGE_PERSON_KIND_WITH_TX: cannot change kind of person referenced by active transactions'); END;''',
 
   // cannot delete person from project_persons if active transactions reference this person
   '''

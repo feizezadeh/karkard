@@ -70,6 +70,7 @@ class CashAccounts extends Table with Stamps {
   List<String> get customConstraints => [
         "CONSTRAINT chk_cash_account_kind CHECK (kind IN ('project','personal'))",
         "CONSTRAINT chk_cash_account_holder_required CHECK (kind != 'personal' OR holder_person_id IS NOT NULL)",
+        "CONSTRAINT chk_cash_account_project_holder_null CHECK (kind != 'project' OR holder_person_id IS NULL)",
       ];
 }
 
@@ -173,8 +174,9 @@ class Transactions extends Table with Stamps {
         "CONSTRAINT chk_tx_work_out_person_required CHECK (type != 'work_out' OR person_id IS NOT NULL)",
         "CONSTRAINT chk_tx_work_out_forbidden_fields CHECK (type != 'work_out' OR (client_id IS NULL AND cash_account_id IS NULL AND from_account_id IS NULL AND to_account_id IS NULL AND performed_by IS NULL AND purpose IS NULL))",
 
-        // income: cash_account required; from/to account, person_id, performed_by, attributed_to, purpose forbidden
+        // income: client_id and cash_account required; from/to account, person_id, performed_by, attributed_to, purpose forbidden
         "CONSTRAINT chk_tx_income_account_required CHECK (type != 'income' OR cash_account_id IS NOT NULL)",
+        "CONSTRAINT chk_tx_income_client_required CHECK (type != 'income' OR client_id IS NOT NULL)",
         "CONSTRAINT chk_tx_income_forbidden_fields CHECK (type != 'income' OR (from_account_id IS NULL AND to_account_id IS NULL AND person_id IS NULL AND performed_by IS NULL AND attributed_to IS NULL AND purpose IS NULL))",
 
         // expense: cash_account required; client_id, from/to account, person_id, performed_by, purpose forbidden

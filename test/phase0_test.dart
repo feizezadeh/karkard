@@ -1,9 +1,13 @@
+import 'dart:io';
+
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:karkard/core/domain_exception.dart';
 import 'package:karkard/core/jalali.dart';
 import 'package:karkard/core/money.dart';
 import 'package:karkard/data/database.dart';
+import 'package:sqlite3/sqlite3.dart' as raw_sqlite;
 
 Future<AppDatabase> newDb() async {
   final db = AppDatabase(NativeDatabase.memory());
@@ -33,6 +37,7 @@ Future<void> seedBasic(AppDatabase db) async {
 }
 
 void main() {
+  driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
   late AppDatabase db;
   setUp(() async {
     db = await newDb();
@@ -182,6 +187,7 @@ void main() {
           amount: 0,
           date: '2025-03-20',
           cashAccountId: const Value('c1'),
+          clientId: const Value('client1'),
         )),
         throwsA(anything),
       );
@@ -193,6 +199,7 @@ void main() {
           amount: -10,
           date: '2025-03-20',
           cashAccountId: const Value('c1'),
+          clientId: const Value('client1'),
         )),
         throwsA(anything),
       );
@@ -216,6 +223,7 @@ void main() {
           amount: 100,
           date: '2025-03-20',
           cashAccountId: const Value('c1'),
+          clientId: const Value('client1'),
         )),
         throwsA(anything),
       );
@@ -229,6 +237,7 @@ void main() {
         amount: 100,
         date: '2025-03-20',
         cashAccountId: const Value('c1'),
+        clientId: const Value('client1'),
       ));
       expect(db.customStatement("DELETE FROM transactions WHERE id='tx_del'"), throwsA(anything));
     });
@@ -242,6 +251,7 @@ void main() {
           amount: 100,
           date: '2025-03-20',
           cashAccountId: const Value('c1'),
+          clientId: const Value('client1'),
           deletedAt: const Value('2025-01-01T00:00:00Z'),
         )),
         throwsA(anything),
@@ -258,6 +268,7 @@ void main() {
         amount: 100,
         date: '2025-03-20',
         cashAccountId: const Value('c1'),
+        clientId: const Value('client1'),
       ));
 
       await db.customStatement("UPDATE projects SET status='locked' WHERE id='p1'");
@@ -270,6 +281,7 @@ void main() {
           amount: 200,
           date: '2025-03-20',
           cashAccountId: const Value('c1'),
+          clientId: const Value('client1'),
         )),
         throwsA(anything),
       );
@@ -344,6 +356,31 @@ void main() {
         final iso = jalaliToIso(y, m, d);
         expect(isoToJalali(iso),
             toFaDigits('$y/${m.toString().padLeft(2, '0')}/${d.toString().padLeft(2, '0')}'));
+      }
+    });
+  });
+
+  group('legacy v1 fixture', () {
+    test('opening database with user_version=1 throws LegacyDatabaseException', () async {
+      final dir = Directory.systemTemp.createTempSync('karkard_legacy_fixture_');
+      final file = File('${dir.path}/legacy_v1.db');
+      try {
+        final rawDb = raw_sqlite.sqlite3.open(file.path);
+        rawDb.execute('PRAGMA user_version = 1;');
+        rawDb.close();
+
+        final db = AppDatabase.forFile(file);
+        expect(
+          () async => await db.customSelect('SELECT 1').get(),
+          throwsA(isA<LegacyDatabaseException>().having(
+            (e) => e.fromVersion,
+            'fromVersion',
+            equals(1),
+          )),
+        );
+        await db.close();
+      } finally {
+        dir.deleteSync(recursive: true);
       }
     });
   });

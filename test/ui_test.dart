@@ -2,7 +2,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:karkard/core/domain_exception.dart';
 import 'package:karkard/ui/adaptive_layout.dart';
+import 'package:karkard/ui/legacy_database_screen.dart';
 import 'package:karkard/ui/platform_shortcuts.dart';
 
 Widget host(Widget w) => MaterialApp(home: Scaffold(body: w));
@@ -54,5 +56,89 @@ void main() {
     expect(n, 0);
     expect(find.byType(FloatingActionButton), findsOneWidget);
     debugDefaultTargetPlatformOverride = null;
+  });
+
+  group('LegacyDatabaseScreen widget tests', () {
+    testWidgets('shows Persian error message and reset button', (t) async {
+      const ex = LegacyDatabaseException(
+        fromVersion: 1,
+        toVersion: 2,
+        message: 'نسخه دیتابیس قدیمی است',
+      );
+      var resetCalled = false;
+      await t.pumpWidget(MaterialApp(
+        home: LegacyDatabaseScreen(
+          exception: ex,
+          onReset: () async => resetCalled = true,
+        ),
+      ));
+
+      expect(find.text('خطای ارتقای دیتابیس'), findsOneWidget);
+      expect(find.text('پایگاه داده قدیمی شناسایی شد'), findsOneWidget);
+      expect(find.text('نسخه دیتابیس قدیمی است'), findsOneWidget);
+      expect(find.text('نسخه فعلی: 1 | نسخه مورد نیاز: 2'), findsOneWidget);
+      expect(find.text('بازنشانی دیتابیس'), findsOneWidget);
+      expect(resetCalled, isFalse);
+    });
+
+    testWidgets('cancel in dialog does not trigger onReset', (t) async {
+      const ex = LegacyDatabaseException(fromVersion: 1, toVersion: 2);
+      var resetCalled = false;
+      await t.pumpWidget(MaterialApp(
+        home: LegacyDatabaseScreen(
+          exception: ex,
+          onReset: () async => resetCalled = true,
+        ),
+      ));
+
+      await t.tap(find.text('بازنشانی دیتابیس'));
+      await t.pumpAndSettle();
+
+      expect(find.text('تأیید بازنشانی دیتابیس'), findsOneWidget);
+      await t.tap(find.text('انصراف'));
+      await t.pumpAndSettle();
+
+      expect(find.text('تأیید بازنشانی دیتابیس'), findsNothing);
+      expect(resetCalled, isFalse);
+    });
+
+    testWidgets('confirm in dialog triggers onReset', (t) async {
+      const ex = LegacyDatabaseException(fromVersion: 1, toVersion: 2);
+      var resetCalled = false;
+      await t.pumpWidget(MaterialApp(
+        home: LegacyDatabaseScreen(
+          exception: ex,
+          onReset: () async => resetCalled = true,
+        ),
+      ));
+
+      await t.tap(find.text('بازنشانی دیتابیس'));
+      await t.pumpAndSettle();
+
+      expect(find.text('تأیید بازنشانی دیتابیس'), findsOneWidget);
+      await t.tap(find.text('بله، بازنشانی شود'));
+      await t.pumpAndSettle();
+
+      expect(resetCalled, isTrue);
+    });
+
+    testWidgets('secondary error displayed when onReset fails', (t) async {
+      const ex = LegacyDatabaseException(fromVersion: 1, toVersion: 2);
+      await t.pumpWidget(MaterialApp(
+        home: LegacyDatabaseScreen(
+          exception: ex,
+          onReset: () async => throw Exception('Disk I/O failure'),
+        ),
+      ));
+
+      await t.tap(find.text('بازنشانی دیتابیس'));
+      await t.pumpAndSettle();
+
+      expect(find.text('تأیید بازنشانی دیتابیس'), findsOneWidget);
+      await t.tap(find.text('بله، بازنشانی شود'));
+      await t.pumpAndSettle();
+
+      expect(find.textContaining('خطا در بازنشانی دیتابیس: Exception: Disk I/O failure'), findsOneWidget);
+    });
   });
 }

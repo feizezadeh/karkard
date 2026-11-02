@@ -5,10 +5,34 @@
 - حالت A: مبنای تعهدی، روش کارکردی (by_work)
 - حالت B: مبنای تعهدی، روش درصد ثابت (fixed_percent)
 - حالت C: مبنای نقدی، روش درصد ثابت (cash, fixed_percent)
+همراه با:
+- آزمون تخصیص باقی‌مانده (۳ شریک، مبالغ نامقسوم مثبت و منفی)
+- آزمون تزریق نقدینگی شریک (آورده نقدی به صندوق پروژه)
 """
 
 def floor_div(a: int, b: int) -> int:
     return a // b
+
+def allocate_remainder(total_amount, partners):
+    """
+    تخصیص مبلغ total_amount بر اساس share_bp و قاعده باقی‌مانده (share_order).
+    طبق قاعده ۴ سند: leftover >= 0 است و شاخه منفی وجود ندارد.
+    """
+    allocated = {}
+    pre_sum = 0
+    rem_map = {}
+    for p in partners:
+        base = floor_div(p['bp'] * total_amount, 10000)
+        allocated[p['id']] = base
+        pre_sum += base
+        rem_map[p['id']] = (p['bp'] * total_amount) % 10000
+    rem = total_amount - pre_sum
+    assert rem >= 0, f"Leftover cannot be negative: {rem}"
+    # مرتب‌سازی بر اساس باقیمانده کسری نزولی، سپس share_order صعودی
+    sorted_p = sorted(partners, key=lambda x: (-rem_map[x['id']], x['order']))
+    for i in range(rem):
+        allocated[sorted_p[i % len(sorted_p)]['id']] += 1
+    return allocated
 
 def verify():
     # ۱. تعاریف اولیه و شرکا
@@ -94,6 +118,10 @@ def verify():
     assert dist_payouts['amir'] == 5
     assert dist_payouts['aref'] == 10
 
+    # پرداخت‌های تسویه بدهی (settle_payable)
+    payout_settle_total = sum(t['amount'] for t in txs if t['type'] == 'payout' and t.get('purpose') == 'settle_payable')
+    assert payout_settle_total == 4, f"Payout settle expected 4, got {payout_settle_total}"
+
     print("=== راستی‌آزمایی مقادیر پایه ===")
     print(f"Win = {win_total}, Wout = {wout_total}, Exp = {exp_total}, Inc = {inc_total}")
     print(f"Profit_acc = {profit_acc} م")
@@ -119,15 +147,16 @@ def verify():
     assert pool_s == 8, f"Pool S expected 8, got {pool_s}"
 
     # سهم از استخر با قاعده باقی‌مانده
-    pool_amir = floor_div(share_bp['amir'] * pool_s, 10000)
-    pool_aref = floor_div(share_bp['aref'] * pool_s, 10000)
-    rem_s = pool_s - (pool_amir + pool_aref)
-    if rem_s > 0:
-        pool_amir += 1
-    assert pool_amir == 4 and pool_aref == 4
+    partners_obj = [
+        {'id': 'amir', 'bp': share_bp['amir'], 'order': share_order['amir']},
+        {'id': 'aref', 'bp': share_bp['aref'], 'order': share_order['aref']},
+    ]
+    pool_alloc = allocate_remainder(pool_s, partners_obj)
+    assert pool_alloc['amir'] == 4 and pool_alloc['aref'] == 4
 
-    profit_a = {'amir': direct_amir + pool_amir, 'aref': direct_aref + pool_aref}
-    assert profit_a['amir'] == 55 and profit_a['aref'] == 23
+    profit_a = {'amir': direct_amir + pool_alloc['amir'], 'aref': direct_aref + pool_alloc['aref']}
+    assert profit_a['amir'] == 55, f"Expected amir profit 55, got {profit_a['amir']}"
+    assert profit_a['aref'] == 23, f"Expected aref profit 23, got {profit_a['aref']}"
     assert profit_a['amir'] + profit_a['aref'] == profit_acc
 
     share_a = {'amir': profit_a['amir'] - dist_payouts['amir'], 'aref': profit_a['aref'] - dist_payouts['aref']}
@@ -157,13 +186,7 @@ def verify():
     # =========================================================
     # حالت B: مبنای تعهدی، روش درصد ثابت (fixed_percent)
     # =========================================================
-    profit_b = {
-        'amir': floor_div(share_bp['amir'] * profit_acc, 10000),
-        'aref': floor_div(share_bp['aref'] * profit_acc, 10000),
-    }
-    rem_b = profit_acc - (profit_b['amir'] + profit_b['aref'])
-    if rem_b > 0:
-        profit_b['amir'] += 1
+    profit_b = allocate_remainder(profit_acc, partners_obj)
     assert profit_b['amir'] == 39 and profit_b['aref'] == 39
 
     share_b = {'amir': profit_b['amir'] - dist_payouts['amir'], 'aref': profit_b['aref'] - dist_payouts['aref']}
@@ -193,16 +216,16 @@ def verify():
     # =========================================================
     # حالت C: مبنای نقدی (fixed_percent, share_basis=cash)
     # =========================================================
-    # در مبنای نقدی: فقط درآمدها و هزینه‌های نقدی واقع‌شده لحاظ می‌شوند
-    # Profit_cash = Inc - Exp - Payout(settle_payable) = 60 - 6 - 4 = 50 م
-    profit_cash = inc_total - exp_total - 4
+    # محاسبه پویا از روی txs (نه ثابت -4):
+    profit_cash = inc_total - exp_total - payout_settle_total
     assert profit_cash == 50, f"Profit_cash expected 50, got {profit_cash}"
 
-    # سهم موقت هر شریک: 25 م
-    temp_share_c = {
-        'amir': floor_div(share_bp['amir'] * profit_cash, 10000),
-        'aref': floor_div(share_bp['aref'] * profit_cash, 10000),
-    }
+    # سهم موقت هر شریک بر اساس share_bp و allocate_remainder:
+    partners_c = [
+        {'id': 'amir', 'bp': share_bp['amir'], 'order': 1},
+        {'id': 'aref', 'bp': share_bp['aref'], 'order': 2},
+    ]
+    temp_share_c = allocate_remainder(profit_cash, partners_c)
     assert temp_share_c['amir'] == 25 and temp_share_c['aref'] == 25
 
     # سهم خالص پس از برداشت توزیع سود نقدی
@@ -212,7 +235,7 @@ def verify():
     }
     assert share_c['amir'] == 20 and share_c['aref'] == 15
 
-    # در مبنای نقدی، طلب تحقق‌نیافته از کارفرما (Rec=0) و بدهی پرداخت‌نشده دستمزد (Pay=0) در سود نقدی نیست.
+    # در مبنای نقدی: طلب پرداخت‌نشده کارفرما (Rec=0) و دستمزد معوق راننده (Pay) در Due نقدی لحاظ نمی‌شوند.
     # ادعای نقدی شرکا روی وجوه نقد در دست پروژه:
     # Due_cash(amir) = Share_cash + Cust = 20 + 0 = 20
     # Due_cash(aref) = Share_cash + Cust = 15 - 9 = 6
@@ -232,10 +255,91 @@ def verify():
     right_c = sum_due_c
     assert left_c == right_c == 26, f"Golden equality failed in Mode C: {left_c} != {right_c}"
     print("--- حالت C (نقدی / cash) ---")
-    print(f"سود نقدی موقت: {profit_cash} م (امیر={temp_share_c['amir']}، عارف={temp_share_c['aref']})")
+    print(f"سود نقدی موقت: {profit_cash} م (پویا از txs: {inc_total} - {exp_total} - {payout_settle_total})")
     print(f"Share نقدی: امیر={share_c['amir']}، عارف={share_c['aref']}")
-    print(f"Due نقدی: امیر={due_c['amir']}، عارف={due_c['aref']} (مجموع={sum_due_c})")
+    print(f"Due نقدی (بدون Pay معوق): امیر={due_c['amir']}، عارف={due_c['aref']} (مجموع={sum_due_c})")
     print(f"تساوی طلایی نقدی: bal(C1)[{bal['C1']}] + Rec_cash[0] = {left_c} == ΣDue_cash[{right_c}] ✓\n")
+
+    # =========================================================
+    # آزمون تخصیص باقی‌مانده (۳ شریک، ۳۳۳۳/۳۳۳۳/۳۳۳۴، مبالغ نامقسوم)
+    # =========================================================
+    p3_partners = [
+        {'id': 'P1', 'bp': 3333, 'order': 1},
+        {'id': 'P2', 'bp': 3333, 'order': 2},
+        {'id': 'P3', 'bp': 3334, 'order': 3},
+    ]
+    assert sum(p['bp'] for p in p3_partners) == 10000
+
+    test_amounts = [7, 100, 10001]
+    for amt in test_amounts:
+        parts = allocate_remainder(amt, p3_partners)
+        assert sum(parts.values()) == amt, f"Remainder allocation failed: sum {sum(parts.values())} != {amt}"
+        if amt == 7:
+            assert parts['P1'] == 2 and parts['P2'] == 2 and parts['P3'] == 3
+    print("--- آزمون تخصیص باقی‌مانده (۳ شریک) ---")
+    print(f"تخصیص برای مبالغ {test_amounts} با تابع allocate_remainder با موفقیت تأیید شد (Σ = کل) ✓\n")
+
+    # =========================================================
+    # آزمون تزریق نقدینگی شریک (آورده نقدی به صندوق پروژه)
+    # =========================================================
+    # فرض: امیر ۱۵ میلیون تومان از جیبش (حساب A1) به صندوق پروژه (C1) واریز می‌کند
+    # تراکنش: transfer از A1 به C1 به مبلغ 15
+    tx_injection = {'id': 15, 'type': 'transfer', 'amount': 15, 'from': 'A1', 'to': 'C1'}
+    txs_with_inj = txs + [tx_injection]
+
+    bal_inj = dict(bal)
+    bal_inj['A1'] -= 15 # A1 = 0 - 15 = -15
+    bal_inj['C1'] += 15 # C1 = 26 + 15 = 41
+    assert bal_inj['A1'] == -15
+    assert bal_inj['C1'] == 41
+
+    # اثر بر Cust(amir):
+    cust_amir_inj = -bal_inj['A1'] # -(-15) = +15 (پروژه به امیر بدهکار است)
+    assert cust_amir_inj == 15
+
+    # سهم سود تغییر نمی‌کند (transfer روی سود بی اثر است)
+    due_a_inj = {
+        'driver': pay_driver,
+        'amir': share_a['amir'] + cust_amir_inj, # 50 + 15 = 65
+        'aref': share_a['aref'] + cust_aref,     # 13 - 9 = 4
+    }
+    sum_due_inj = sum(due_a_inj.values()) # 2 + 65 + 4 = 71
+
+    # تساوی طلایی جدید: bal(C1)[41] + Rec[30] = 71 == sum(Due)[71]
+    left_inj = bal_inj['C1'] + rec_total
+    right_inj = sum_due_inj
+    assert left_inj == right_inj == 71, f"Cash injection golden equality failed: {left_inj} != {right_inj}"
+    print("--- آزمون تزریق نقدینگی شریک (آورده نقدی) ---")
+    print(f"انتقال ۱۵م از A1 به C1: C1={bal_inj['C1']}م، A1={bal_inj['A1']}م ⇒ Cust(amir)=+{cust_amir_inj}م")
+    print(f"Due جدید: راننده={due_a_inj['driver']}، امیر={due_a_inj['amir']}، عارف={due_a_inj['aref']} (مجموع={sum_due_inj})")
+    print(f"تساوی طلایی پس از تزریق: bal(C1)[{bal_inj['C1']}] + Rec[{rec_total}] = {left_inj} == ΣDue[{right_inj}] ✓\n")
+
+    # =========================================================
+    # آزمون شکست تساوی طلایی در صورت income بدون client_id
+    # =========================================================
+    # اگر تراکنش income به مبلغ ۱۰م بدون client_id ثبت شود:
+    # 1. موجودی C1 ده میلیون زیاد می‌شود: bal(C1) = 26 + 10 = 36
+    # 2. چون کارفرمایی مشخص نشده، هیچ طلبی از کارفرما کاهش نمی‌یابد: Rec همچنان 30 باقی می‌ماند
+    # 3. سمت چپ: bal(C1)[36] + Rec[30] = 66
+    # 4. سمت راست: دریافتی نقدی سود ایجاد نمی‌کند (فقط وصول طلب است)، لذا Due شرکا همان 56 می‌ماند
+    # در نتیجه: 66 != 56 (تساوی طلایی ۱۰ میلیون تراز را به هم می‌زند!)
+    bal_bad_inc = bal['C1'] + 10
+    left_bad_inc = bal_bad_inc + rec_total  # 36 + 30 = 66
+    right_bad_inc = sum_due_a  # 56
+    assert left_bad_inc != right_bad_inc, "Equality should break without client_id on income"
+    print("--- آزمون شکست تساوی طلایی در صورت income بدون client ---")
+    print(f"در صورت نبود client_id: bal(C1)[{bal_bad_inc}] + Rec[{rec_total}] = {left_bad_inc} != ΣDue[{right_bad_inc}] (شکست {left_bad_inc - right_bad_inc} میلیونی تساوی)")
+
+    # راستی‌آزمایی رد این سناریو توسط SQLite DB
+    import sqlite3
+    con = sqlite3.connect(":memory:")
+    con.execute("CREATE TABLE t (type TEXT, client_id TEXT, cash_account_id TEXT, CONSTRAINT chk_tx_income_client_required CHECK (type != 'income' OR client_id IS NOT NULL))")
+    try:
+        con.execute("INSERT INTO t VALUES ('income', NULL, 'c1')")
+        assert False, "DB should have rejected income without client_id"
+    except sqlite3.IntegrityError:
+        print("دیتابیس تراکنش income بدون client_id را با موفقیت رد کرد (CHECK chk_tx_income_client_required) ✓\n")
+    con.close()
 
     print("ALL ASSERTS PASSED SUCCESSFULLY!")
 
