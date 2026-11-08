@@ -1,0 +1,86 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 320" width="100%" height="100%" direction="rtl">
+  <defs>
+    <linearGradient id="bgFull" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#F8FAFC"/>
+    </linearGradient>
+
+    <linearGradient id="tealFull" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00695C"/>
+      <stop offset="70%" stop-color="#004D40"/>
+      <stop offset="100%" stop-color="#042F2C"/>
+    </linearGradient>
+
+    <linearGradient id="amberFull" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FBBF24"/>
+      <stop offset="60%" stop-color="#F59E0B"/>
+      <stop offset="100%" stop-color="#D97706"/>
+    </linearGradient>
+
+    <filter id="shadowFull" x="-10%" y="-10%" width="125%" height="125%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#004D40" flood-opacity="0.12"/>
+    </filter>
+  </defs>
+
+  <rect width="900" height="320" rx="36" fill="url(#bgFull)" stroke="#E2E8F0" stroke-width="2"/>
+
+  <!-- EMBLEM on Right Side (RTL layout) -->
+  <g transform="translate(620, 20) scale(0.55)" filter="url(#shadowFull)">
+    <!-- Base Platform -->
+    <path d="M128 384 L384 384 C395 384 402 372 396 362 L368 316 C364 310 357 306 350 306 L162 306 C155 306 148 310 144 316 L116 362 C110 372 117 384 128 384 Z" fill="url(#tealFull)"/>
+    <rect x="180" y="338" width="152" height="7" rx="3.5" fill="#80CBC4" opacity="0.8"/>
+    <rect x="206" y="356" width="100" height="6" rx="3" fill="#80CBC4" opacity="0.5"/>
+
+    <!-- Boom -->
+    <path d="M196 306 L278 108 C282 98 296 98 300 108 L348 306 Z" fill="#26A69A" opacity="0.25"/>
+    <path d="M172 312 L356 128 C364 120 378 123 382 134 L386 146 C390 157 386 169 376 177 L206 324 C194 334 176 328 172 312 Z" fill="url(#tealFull)"/>
+    <line x1="220" y1="280" x2="250" y2="225" stroke="#FFFFFF" stroke-width="4.5" stroke-linecap="round"/>
+    <line x1="250" y1="225" x2="295" y2="200" stroke="#FFFFFF" stroke-width="4.5" stroke-linecap="round"/>
+    <line x1="295" y1="200" x2="330" y2="150" stroke="#FFFFFF" stroke-width="4.5" stroke-linecap="round"/>
+
+    <!-- Pulley & Cable -->
+    <circle cx="368" cy="144" r="26" fill="url(#tealFull)" stroke="#FFFFFF" stroke-width="6"/>
+    <circle cx="368" cy="144" r="12" fill="url(#amberFull)"/>
+    <line x1="368" y1="170" x2="368" y2="250" stroke="#004D40" stroke-width="5" stroke-dasharray="8 4"/>
+
+    <!-- Hook & Balance Weight -->
+    <rect x="352" y="246" width="32" height="20" rx="5" fill="url(#amberFull)"/>
+    <circle cx="368" cy="256" r="4" fill="#FFFFFF"/>
+    <circle cx="338" cy="270" r="16" fill="url(#amberFull)" stroke="#FFFFFF" stroke-width="3"/>
+
+    <!-- Center Accent -->
+    <polygon points="216,306 256,220 296,306" fill="url(#amberFull)"/>
+    <circle cx="256" cy="265" r="7" fill="#FFFFFF"/>
+  </g>
+
+  <!-- TYPOGRAPHY on Left/Center (Persian & English Brand) -->
+  <g transform="translate(60, 0)">
+    <!-- Brand Title Badge / Category -->
+    <rect x="375" y="60" width="155" height="30" rx="15" fill="#E0F2F1"/>
+    <text x="452" y="80" font-family="Vazirmatn, Tahoma, sans-serif" font-size="13" font-weight="bold" fill="#00695C" text-anchor="middle">
+      حسابداری تخصصی پیمانکاری
+    </text>
+
+    <!-- Main Title: دفتر کارکرد -->
+    <text x="530" y="152" font-family="Vazirmatn, Shabnam, Tahoma, sans-serif" font-size="58" font-weight="900" fill="#004D40" text-anchor="end">
+      دفتر کارکَرد
+    </text>
+
+    <!-- Accent Dot under title -->
+    <circle cx="538" cy="120" r="6" fill="url(#amberFull)"/>
+
+    <!-- Subtitle: توضیحات عملکردی و صنعتی -->
+    <text x="530" y="196" font-family="Vazirmatn, Tahoma, sans-serif" font-size="18" font-weight="bold" fill="#475569" text-anchor="end">
+      سامانه یکپارچه مدیریت مالی، تراز طلایی و کارکرد جرثقیل
+    </text>
+
+    <!-- English Brand Tagline -->
+    <text x="530" y="235" font-family="Roboto, 'Segoe UI', sans-serif" font-size="15" font-weight="700" letter-spacing="3" fill="#94A3B8" text-anchor="end">
+      KARKARD LEDGER • FINANCIAL & CRANE OPS
+    </text>
+
+    <!-- Accent Divider Bar with Golden Tip -->
+    <rect x="180" y="258" width="350" height="4" rx="2" fill="#E2E8F0"/>
+    <rect x="430" y="258" width="100" height="4" rx="2" fill="url(#amberFull)"/>
+  </g>
+</svg>

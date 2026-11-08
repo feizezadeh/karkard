@@ -1,0 +1,28 @@
+name: Build Windows App
+
+on:
+  push:
+    branches: [ master, main ]
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build Release Binary
+        working-directory: rust-version
+        run: |
+          cargo build --release --package karkard-app
+
+      - name: Upload Windows Executable
+        uses: actions/upload-artifact@v4
+        with:
+          name: karkard-windows-x64
+          path: rust-version/target/release/karkard-app.exe

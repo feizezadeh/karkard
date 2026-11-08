@@ -1,0 +1,10 @@
+/target/
+**/*.rs.bk
+Cargo.lock.bk
+.cargo/config.toml
+android/.gradle/
+android/app/build/
+android/local.properties
+android/.idea/
+android/captures/
+*.apk

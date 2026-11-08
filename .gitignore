@@ -43,3 +43,15 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Rust / Tauri build artifacts
+rust-version/target/
+rust-version/android/.gradle/
+rust-version/android/app/build/
+rust-version/android/local.properties
+*.apk
+
+# Sensitive local spreadsheets & temp files
+*.xlsx
+.agents/
+screenshot/

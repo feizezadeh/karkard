@@ -270,12 +270,14 @@ def verify():
     ]
     assert sum(p['bp'] for p in p3_partners) == 10000
 
-    test_amounts = [7, 100, 10001]
+    test_amounts = [7, 100, 10001, -7, -100]
     for amt in test_amounts:
         parts = allocate_remainder(amt, p3_partners)
         assert sum(parts.values()) == amt, f"Remainder allocation failed: sum {sum(parts.values())} != {amt}"
         if amt == 7:
             assert parts['P1'] == 2 and parts['P2'] == 2 and parts['P3'] == 3
+        if amt == -7:
+            assert parts['P1'] == -2 and parts['P2'] == -2 and parts['P3'] == -3
     print("--- آزمون تخصیص باقی‌مانده (۳ شریک) ---")
     print(f"تخصیص برای مبالغ {test_amounts} با تابع allocate_remainder با موفقیت تأیید شد (Σ = کل) ✓\n")
 

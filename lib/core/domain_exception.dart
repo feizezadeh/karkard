@@ -43,6 +43,8 @@ class DomainErrors {
   static const String cannotDemotePayoutPartnerWithTx = 'ERR_CANNOT_DEMOTE_PAYOUT_PARTNER_WITH_TX';
   static const String cannotDeletePersonWithTransactions = 'ERR_CANNOT_DELETE_PERSON_WITH_TRANSACTIONS';
   static const String cannotChangePersonKindWithTx = 'ERR_CANNOT_CHANGE_PERSON_KIND_WITH_TX';
+  static const String personKindSettlementModeMismatch = 'ERR_PERSON_KIND_SETTLEMENT_MODE_MISMATCH';
+  static const String cannotChangePersonKindInProject = 'ERR_CANNOT_CHANGE_PERSON_KIND_IN_PROJECT';
   static const String cannotUpdateProjectPersonPkWithTx = 'ERR_CANNOT_UPDATE_PROJECT_PERSON_PK_WITH_TX';
   static const String txUndeleteForbidden = 'ERR_TX_UNDELETE_FORBIDDEN';
   static const String appSettingsKeyImmutable = 'ERR_APP_SETTINGS_KEY_IMMUTABLE';

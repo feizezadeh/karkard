@@ -276,6 +276,22 @@ DomainException mapSqliteException(Object error) {
     );
   }
 
+  if (msg.contains('ERR_PERSON_KIND_SETTLEMENT_MODE_MISMATCH') ||
+      msg.contains('trg_pp_check_person_kind_settlement_mode')) {
+    return const DomainException(
+      DomainErrors.personKindSettlementModeMismatch,
+      'profit_share or both is only permitted for partner, and client cannot be in project_persons',
+    );
+  }
+
+  if (msg.contains('ERR_CANNOT_CHANGE_PERSON_KIND_IN_PROJECT') ||
+      msg.contains('trg_persons_check_kind_with_project_persons_update')) {
+    return const DomainException(
+      DomainErrors.cannotChangePersonKindInProject,
+      'cannot change person kind: incompatible with existing project_persons record',
+    );
+  }
+
   // Unknown errors are rethrown
   throw error;
 }

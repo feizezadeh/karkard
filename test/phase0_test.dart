@@ -50,7 +50,7 @@ void main() {
       final v = await (db.select(db.appSettings)
             ..where((t) => t.key.equals('schema_version')))
           .getSingle();
-      expect(v.value, '2');
+      expect(v.value, '3');
 
       final unit = await (db.select(db.appSettings)
             ..where((t) => t.key.equals('unit')))
@@ -189,7 +189,7 @@ void main() {
           cashAccountId: const Value('c1'),
           clientId: const Value('client1'),
         )),
-        throwsA(anything),
+        throwsA(isA<SqliteException>().having((e) => e.toString(), 'message', contains('chk_tx_amount_positive'))),
       );
       expect(
         db.into(db.transactions).insert(TransactionsCompanion.insert(
@@ -201,16 +201,16 @@ void main() {
           cashAccountId: const Value('c1'),
           clientId: const Value('client1'),
         )),
-        throwsA(anything),
+        throwsA(isA<SqliteException>().having((e) => e.toString(), 'message', contains('chk_tx_amount_positive'))),
       );
     });
 
     test('invalid type rejected', () async {
       expect(
         db.customStatement(
-          "INSERT INTO transactions (id, project_id, type, amount, date) VALUES ('bad_t', 'p1', 'bogus', 100, '2025-03-20')",
+          "INSERT INTO transactions (id, project_id, type, amount, date, created_at, updated_at) VALUES ('bad_t', 'p1', 'bogus', 100, '2025-03-20', 1, 1)",
         ),
-        throwsA(anything),
+        throwsA(isA<SqliteException>().having((e) => e.toString(), 'message', contains('chk_tx_type'))),
       );
     });
 
@@ -225,7 +225,7 @@ void main() {
           cashAccountId: const Value('c1'),
           clientId: const Value('client1'),
         )),
-        throwsA(anything),
+        throwsA(isA<SqliteException>().having((e) => e.toString(), 'message', contains('FOREIGN KEY constraint failed'))),
       );
     });
 
@@ -239,7 +239,10 @@ void main() {
         cashAccountId: const Value('c1'),
         clientId: const Value('client1'),
       ));
-      expect(db.customStatement("DELETE FROM transactions WHERE id='tx_del'"), throwsA(anything));
+      expect(
+        db.customStatement("DELETE FROM transactions WHERE id='tx_del'"),
+        throwsA(isA<SqliteException>().having((e) => e.toString(), 'message', contains('hard delete of transactions is forbidden'))),
+      );
     });
 
     test('soft delete needs reason', () async {
@@ -254,7 +257,7 @@ void main() {
           clientId: const Value('client1'),
           deletedAt: const Value('2025-01-01T00:00:00Z'),
         )),
-        throwsA(anything),
+        throwsA(isA<SqliteException>().having((e) => e.toString(), 'message', contains('chk_tx_deleted_reason'))),
       );
     });
   });
@@ -283,18 +286,18 @@ void main() {
           cashAccountId: const Value('c1'),
           clientId: const Value('client1'),
         )),
-        throwsA(anything),
+        throwsA(isA<SqliteException>().having((e) => e.toString(), 'message', contains('ERR_PROJECT_LOCKED_TX'))),
       );
 
       expect(
         db.customStatement("UPDATE transactions SET amount=500 WHERE id='tx_lock_test'"),
-        throwsA(anything),
+        throwsA(isA<SqliteException>().having((e) => e.toString(), 'message', contains('ERR_PROJECT_LOCKED_TX'))),
       );
 
       expect(
         db.customStatement(
             "UPDATE transactions SET deleted_at='x', deleted_reason='r' WHERE id='tx_lock_test'"),
-        throwsA(anything),
+        throwsA(isA<SqliteException>().having((e) => e.toString(), 'message', contains('ERR_PROJECT_LOCKED_TX'))),
       );
 
       await db.customStatement("UPDATE projects SET status='open' WHERE id='p1'");

@@ -1,8 +1,11 @@
+import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:karkard/core/domain_exception.dart';
+import 'package:karkard/main.dart';
 import 'package:karkard/ui/adaptive_layout.dart';
 import 'package:karkard/ui/legacy_database_screen.dart';
 import 'package:karkard/ui/platform_shortcuts.dart';
@@ -139,6 +142,37 @@ void main() {
       await t.pumpAndSettle();
 
       expect(find.textContaining('خطا در بازنشانی دیتابیس: Exception: Disk I/O failure'), findsOneWidget);
+    });
+
+    test('two consecutive resets create two distinct timestamped backups without deleting previous backups', () async {
+      final tempDir = Directory.systemTemp.createTempSync('karkard_backup_test_');
+      final dbFile = File('${tempDir.path}/karkard.db');
+      final shmFile = File('${tempDir.path}/karkard.db-shm');
+      final walFile = File('${tempDir.path}/karkard.db-wal');
+
+      // Create initial files
+      dbFile.writeAsStringSync('db content 1');
+      shmFile.writeAsStringSync('shm content 1');
+      walFile.writeAsStringSync('wal content 1');
+
+      // Reset 1
+      final baks1 = await backupDatabaseFiles(dbFile);
+      expect(baks1.length, 3);
+      expect(dbFile.existsSync(), isFalse);
+
+      // Recreate files for second reset
+      await Future.delayed(const Duration(milliseconds: 10));
+      dbFile.writeAsStringSync('db content 2');
+
+      // Reset 2
+      final baks2 = await backupDatabaseFiles(dbFile);
+      expect(baks2.length, 1);
+      expect(dbFile.existsSync(), isFalse);
+
+      // Verify all backups exist in directory
+      final allBaks = tempDir.listSync().where((f) => f.path.endsWith('.bak')).toList();
+      expect(allBaks.length, 4); // 3 from first reset + 1 from second reset
+      tempDir.deleteSync(recursive: true);
     });
   });
 }

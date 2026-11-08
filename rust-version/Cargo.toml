@@ -1,0 +1,7 @@
+[workspace]
+members = [
+    "crates/karkard-core",
+    "crates/karkard-cli",
+    "src-tauri",
+]
+resolver = "2"

@@ -1,0 +1,1660 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>دفتر کارکرد — سیستم جامع حسابداری کارگاهی و جرثقیل</title>
+  
+  <!-- Offline Precompiled Tailwind CSS & Vazirmatn Persian Typography -->
+  <link rel="stylesheet" href="src/styles/tailwind.min.css">
+  <link rel="stylesheet" href="src/styles/app.css">
+  
+  <style>
+    body {
+      font-family: 'Vazirmatn', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      padding-bottom: env(safe-area-inset-bottom);
+      -webkit-tap-highlight-color: transparent;
+    }
+    @media print {
+      .no-print { display: none !important; }
+      body { background: white !important; color: black !important; }
+      .print-page { box-shadow: none !important; border: none !important; padding: 0 !important; }
+    }
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+
+    /* Landscape Mobile & Low-Height Screens Optimizations */
+    @media (max-height: 550px) {
+      header .header-bar {
+        height: 2.75rem !important;
+      }
+      .nav-tabs-bar {
+        padding-top: 0.15rem !important;
+        padding-bottom: 0.15rem !important;
+      }
+      .nav-tab {
+        padding-top: 0.25rem !important;
+        padding-bottom: 0.25rem !important;
+        padding-left: 0.5rem !important;
+        padding-right: 0.5rem !important;
+        font-size: 0.72rem !important;
+      }
+      .nav-tab svg {
+        width: 0.875rem !important;
+        height: 0.875rem !important;
+      }
+      nav.fixed.bottom-0 {
+        height: 2.75rem !important;
+        padding-bottom: env(safe-area-inset-bottom, 2px) !important;
+      }
+      nav.fixed.bottom-0 .grid {
+        height: 2.75rem !important;
+      }
+      nav.fixed.bottom-0 .mobile-nav-btn {
+        padding: 1px 0 !important;
+        gap: 1px !important;
+      }
+      nav.fixed.bottom-0 .mobile-nav-btn svg {
+        width: 1rem !important;
+        height: 1rem !important;
+      }
+      nav.fixed.bottom-0 .mobile-nav-btn span {
+        font-size: 8.5px !important;
+      }
+      main {
+        padding-top: 0.35rem !important;
+        padding-bottom: 2.5rem !important;
+      }
+      #mobileFabNewTx {
+        bottom: 3.25rem !important;
+        padding: 0.35rem 0.65rem !important;
+        font-size: 0.7rem !important;
+      }
+      .modal-box {
+        max-height: 96vh !important;
+        border-radius: 1rem !important;
+      }
+      .modal-box form {
+        max-height: calc(96vh - 2.75rem) !important;
+      }
+    }
+  </style>
+</head>
+<body class="bg-gray-50 text-gray-800 antialiased min-h-screen flex flex-col select-none">
+
+  <!-- ====================================================================== -->
+  <!-- Top Navigation Bar                                                     -->
+  <!-- ====================================================================== -->
+  <header class="bg-white border-b border-gray-200 sticky top-0 z-30 shadow-xs no-print">
+    <div class="header-bar max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 h-12 sm:h-14 lg:h-16 flex items-center justify-between gap-1.5 sm:gap-2">
+      
+      <!-- Logo (Click opens About Us) & Project Selector -->
+      <div class="flex items-center space-x-1.5 sm:space-x-2 space-x-reverse min-w-0">
+        <button onclick="openAboutModal()" class="flex items-center gap-1.5 p-1 rounded-xl hover:bg-gray-100 transition cursor-pointer shrink-0" title="درباره ما و اطلاعات نگارش">
+          <img src="assets/karkard_logo.png" alt="Logo" class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg shadow-xs border border-gray-200 object-cover" onerror="this.src=''; this.className='hidden'; document.getElementById('logoFallback').classList.remove('hidden');">
+          <div id="logoFallback" class="hidden w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold text-xs shadow-xs">دک</div>
+        </button>
+
+        <div class="flex items-center gap-1 sm:gap-1.5 min-w-0">
+          <div class="relative flex items-center min-w-0">
+            <select id="projectSelect" class="bg-gray-100 hover:bg-gray-200 border border-gray-300 text-gray-900 font-bold text-xs sm:text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 py-1.5 px-2 max-w-[120px] xs:max-w-[150px] sm:max-w-[180px] md:max-w-[220px] lg:max-w-xs truncate cursor-pointer transition">
+              <option value="">در حال بارگذاری...</option>
+            </select>
+            <button onclick="openManageProjectsModal()" class="mr-0.5 p-1 text-gray-500 hover:text-blue-600 hover:bg-gray-100 rounded-lg transition cursor-pointer shrink-0" title="مدیریت و فهرست همه پروژه‌ها">
+              <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+            </button>
+          </div>
+          <span id="projectLockBadge" class="hidden inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300 shrink-0">
+            🔒 قفل
+          </span>
+        </div>
+      </div>
+
+      <!-- Action Buttons (Guaranteed not to overflow in landscape) -->
+      <div class="flex items-center gap-1 sm:gap-1.5 shrink-0">
+        <button id="btnNewTx" onclick="openNewTxModal()" class="hidden md:inline-flex bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-bold text-xs px-2.5 sm:px-3 py-1.5 rounded-xl items-center gap-1 shadow-xs transition cursor-pointer shrink-0" title="ثبت تراکنش جدید">
+          <span class="text-sm font-bold">+</span>
+          <span class="hidden lg:inline">تراکنش جدید</span>
+        </button>
+
+        <button onclick="openExcelModal()" class="p-1.5 sm:p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 active:bg-blue-100 rounded-xl transition cursor-pointer shrink-0" title="ورود از اکسل">
+          <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+        </button>
+
+        <button onclick="switchTab('accounts')" class="p-1.5 sm:p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 active:bg-blue-100 rounded-xl transition cursor-pointer shrink-0" title="صندوق‌ها و حساب‌های بانکی">
+          <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
+        </button>
+
+        <button onclick="switchTab('fiscal')" class="p-1.5 sm:p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 active:bg-blue-100 rounded-xl transition cursor-pointer shrink-0" title="مدیریت سال‌های مالی و بستن دوره">
+          <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+        </button>
+
+        <button onclick="openNewProjectModal()" class="p-1.5 sm:p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 active:bg-blue-100 rounded-xl transition cursor-pointer shrink-0" title="تعریف پروژه جدید">
+          <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+        </button>
+      </div>
+
+    </div>
+
+    <!-- Navigation Tabs (Desktop & Landscape Mobile/Tablet) -->
+    <div class="nav-tabs-bar max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 hidden md:flex items-center gap-1 sm:gap-1.5 lg:gap-3 border-t border-gray-100 text-xs font-semibold overflow-x-auto no-scrollbar scroll-smooth">
+      <button class="nav-tab shrink-0 py-2 sm:py-2.5 px-2 sm:px-2.5 border-b-2 border-blue-600 text-blue-600 flex items-center gap-1 cursor-pointer transition whitespace-nowrap" data-tab="dashboard">
+        <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+        <span>داشبورد</span>
+      </button>
+      <button class="nav-tab shrink-0 py-2 sm:py-2.5 px-2 sm:px-2.5 border-b-2 border-transparent text-gray-500 hover:text-gray-800 flex items-center gap-1 cursor-pointer transition whitespace-nowrap" data-tab="transactions">
+        <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+        <span>تراکنش‌ها</span>
+      </button>
+      <button class="nav-tab shrink-0 py-2 sm:py-2.5 px-2 sm:px-2.5 border-b-2 border-transparent text-gray-500 hover:text-gray-800 flex items-center gap-1 cursor-pointer transition whitespace-nowrap" data-tab="reports">
+        <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+        <span>گزارش‌ها</span>
+      </button>
+      <button class="nav-tab shrink-0 py-2 sm:py-2.5 px-2 sm:px-2.5 border-b-2 border-transparent text-gray-500 hover:text-gray-800 flex items-center gap-1 cursor-pointer transition whitespace-nowrap" data-tab="persons">
+        <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+        <span>طرف‌حساب‌ها</span>
+      </button>
+      <button class="nav-tab shrink-0 py-2 sm:py-2.5 px-2 sm:px-2.5 border-b-2 border-transparent text-gray-500 hover:text-gray-800 flex items-center gap-1 cursor-pointer transition whitespace-nowrap" data-tab="fiscal">
+        <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+        <span>سال‌های مالی</span>
+      </button>
+      <button class="nav-tab shrink-0 py-2 sm:py-2.5 px-2 sm:px-2.5 border-b-2 border-transparent text-gray-500 hover:text-gray-800 flex items-center gap-1 cursor-pointer transition whitespace-nowrap" data-tab="accounts">
+        <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
+        <span>صندوق و بانک</span>
+      </button>
+      <button class="nav-tab shrink-0 py-2 sm:py-2.5 px-2 sm:px-2.5 border-b-2 border-transparent text-gray-500 hover:text-gray-800 flex items-center gap-1 cursor-pointer transition whitespace-nowrap" data-tab="settings">
+        <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+        <span>تنظیمات</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- ====================================================================== -->
+  <!-- Main Content Area                                                      -->
+  <!-- ====================================================================== -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-6 lg:p-8 pb-36 md:pb-8 space-y-4 sm:space-y-6">
+
+    <!-- ------------------------------------------------------------------ -->
+    <!-- Tab 0: Dashboard (Executive Overview & Charts)                     -->
+    <!-- ------------------------------------------------------------------ -->
+    <div id="tab-dashboard" class="tab-pane space-y-6">
+
+      <!-- 1. Executive Status & Golden Balance Banner -->
+      <div class="bg-white rounded-xl sm:rounded-2xl border border-gray-200 p-3 sm:p-5 shadow-xs flex flex-wrap items-center justify-between gap-3 sm:gap-4">
+        <div class="flex items-center gap-2.5 sm:gap-3">
+          <div class="w-9 h-9 sm:w-12 sm:h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold shrink-0">
+            <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <h2 id="dashProjectTitle" class="text-sm sm:text-base font-bold text-gray-900">پروژه جاری</h2>
+              <span id="dashLockTag" class="hidden text-xs bg-amber-100 text-amber-800 font-bold px-2 py-0.5 rounded-md border border-amber-300">🔒 قفل</span>
+            </div>
+            <div class="text-[11px] sm:text-xs text-gray-500 mt-0.5">
+              <span id="dashTxCount">۰</span> تراکنش ثبت‌شده در این دوره مالی
+            </div>
+          </div>
+        </div>
+
+        <div id="dashGoldenBadge" class="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl text-xs font-bold bg-green-50 text-green-800 border border-green-200 shrink-0">
+          <span class="w-2 sm:w-2.5 h-2 sm:h-2.5 rounded-full bg-green-500"></span>
+          <span>تراز طلایی برقرار است</span>
+        </div>
+      </div>
+
+      <!-- 2. Financial KPI Cards (4 Cards matching Flutter - Responsive 4 columns on landscape/desktop) -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 lg:gap-4">
+        <div class="bg-white p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-gray-200 shadow-xs flex flex-col justify-between">
+          <div class="flex items-center justify-between text-gray-500 mb-1">
+            <span class="text-[11px] sm:text-xs font-bold truncate">موجودی نقد و بانک</span>
+            <span class="p-1 bg-teal-50 text-teal-700 rounded-lg text-xs">💵</span>
+          </div>
+          <div id="dashKpiCash" class="text-xs sm:text-sm md:text-base lg:text-xl font-bold font-mono text-teal-800 whitespace-nowrap overflow-hidden text-ellipsis">۰ تومان</div>
+          <div class="hidden lg:block text-[11px] text-gray-400 mt-1">موجودی صندوق‌ها و حساب‌های پروژه</div>
+        </div>
+
+        <div class="bg-white p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-gray-200 shadow-xs flex flex-col justify-between">
+          <div class="flex items-center justify-between text-gray-500 mb-1">
+            <span class="text-[11px] sm:text-xs font-bold truncate">طلب از کارفرمایان</span>
+            <span class="p-1 bg-indigo-50 text-indigo-700 rounded-lg text-xs">📋</span>
+          </div>
+          <div id="dashKpiReceivables" class="text-xs sm:text-sm md:text-base lg:text-xl font-bold font-mono text-indigo-800 whitespace-nowrap overflow-hidden text-ellipsis">۰ تومان</div>
+          <div class="hidden lg:block text-[11px] text-gray-400 mt-1">کارکرد وصول‌نشده از کارفرماها</div>
+        </div>
+
+        <div class="bg-white p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-gray-200 shadow-xs flex flex-col justify-between">
+          <div class="flex items-center justify-between text-gray-500 mb-1">
+            <span class="text-[11px] sm:text-xs font-bold truncate">بدهی‌ها و تعهدات</span>
+            <span class="p-1 bg-amber-50 text-amber-700 rounded-lg text-xs">⏳</span>
+          </div>
+          <div id="dashKpiDue" class="text-xs sm:text-sm md:text-base lg:text-xl font-bold font-mono text-amber-800 whitespace-nowrap overflow-hidden text-ellipsis">۰ تومان</div>
+          <div class="hidden lg:block text-[11px] text-gray-400 mt-1">مطالبات رانندگان، پرسنل و شرکا</div>
+        </div>
+
+        <div class="bg-white p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-gray-200 shadow-xs flex flex-col justify-between">
+          <div class="flex items-center justify-between text-gray-500 mb-1">
+            <span class="text-[11px] sm:text-xs font-bold truncate">سود تعهدی (Accrual)</span>
+            <span class="p-1 bg-green-50 text-green-700 rounded-lg text-xs">📈</span>
+          </div>
+          <div id="dashKpiProfit" class="text-xs sm:text-sm md:text-base lg:text-xl font-bold font-mono text-green-800 whitespace-nowrap overflow-hidden text-ellipsis">۰ تومان</div>
+          <div class="hidden lg:block text-[11px] text-gray-400 mt-1">کارکرد کل منهای هزینه‌ها</div>
+        </div>
+      </div>
+
+      <!-- 3. Quick Navigation & Shortcuts Bar (Touch Carousel on Mobile) -->
+      <div class="bg-white rounded-2xl border border-gray-200 p-4 sm:p-5 shadow-xs">
+        <div class="flex items-center gap-2 mb-2.5 font-bold text-xs text-gray-700 uppercase tracking-wider">
+          <svg class="w-4 h-4 text-blue-600" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clip-rule="evenodd"/></svg>
+          <span>دسترسی سریع</span>
+        </div>
+        <div class="flex overflow-x-auto no-scrollbar sm:flex-wrap gap-2 pb-1 text-xs font-bold">
+          <button onclick="openNewTxModal()" class="shrink-0 bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-xs">
+            <span>+</span><span>تراکنش جدید</span>
+          </button>
+          <button onclick="switchTab('transactions')" class="shrink-0 bg-gray-100 hover:bg-gray-200 text-gray-800 px-3 py-2 rounded-xl transition cursor-pointer flex items-center gap-1.5">
+            <span>📄</span><span>دفتر تراکنش‌ها</span>
+          </button>
+          <button onclick="openExcelModal()" class="shrink-0 bg-gray-100 hover:bg-gray-200 text-gray-800 px-3 py-2 rounded-xl transition cursor-pointer flex items-center gap-1.5">
+            <span>📊</span><span>ورود از اکسل</span>
+          </button>
+          <button onclick="switchTab('reports')" class="shrink-0 bg-gray-100 hover:bg-gray-200 text-gray-800 px-3 py-2 rounded-xl transition cursor-pointer flex items-center gap-1.5">
+            <span>📑</span><span>گزارش‌ها و چاپ</span>
+          </button>
+          <button onclick="switchTab('persons')" class="shrink-0 bg-gray-100 hover:bg-gray-200 text-gray-800 px-3 py-2 rounded-xl transition cursor-pointer flex items-center gap-1.5">
+            <span>👥</span><span>طرف‌حساب‌ها</span>
+          </button>
+          <button onclick="switchTab('fiscal')" class="shrink-0 bg-gray-100 hover:bg-gray-200 text-gray-800 px-3 py-2 rounded-xl transition cursor-pointer flex items-center gap-1.5">
+            <span>🗓️</span><span>سال‌های مالی</span>
+          </button>
+          <button onclick="switchTab('accounts')" class="shrink-0 bg-gray-100 hover:bg-gray-200 text-gray-800 px-3 py-2 rounded-xl transition cursor-pointer flex items-center gap-1.5">
+            <span>💳</span><span>صندوق و بانک</span>
+          </button>
+          <button onclick="switchTab('settings')" class="shrink-0 bg-gray-100 hover:bg-gray-200 text-gray-800 px-3 py-2 rounded-xl transition cursor-pointer flex items-center gap-1.5">
+            <span>⚙️</span><span>تنظیمات</span>
+          </button>
+          <button onclick="openAboutModal()" class="shrink-0 bg-gray-100 hover:bg-gray-200 text-gray-800 px-3 py-2 rounded-xl transition cursor-pointer flex items-center gap-1.5">
+            <span>ℹ️</span><span>درباره ما</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 4. Visual Financial Charts & Partner Share Breakdown -->
+      <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
+        
+        <!-- Composition Donut / Bar Chart -->
+        <div class="lg:col-span-2 bg-white rounded-2xl border border-gray-200 p-5 shadow-xs flex flex-col justify-between">
+          <div>
+            <h3 class="font-bold text-sm text-gray-800 mb-3 flex items-center gap-2">
+              <span class="text-blue-600">📊</span>
+              <span>ترکیب مبالغ دوره</span>
+            </h3>
+            <div class="space-y-3 text-xs">
+              <div>
+                <div class="flex justify-between font-bold mb-1">
+                  <span class="text-teal-700">کارکردها (Win):</span>
+                  <span id="chartValWin">۰</span>
+                </div>
+                <div class="w-full bg-gray-100 rounded-full h-2.5 overflow-hidden">
+                  <div id="chartBarWin" class="bg-teal-600 h-2.5 rounded-full" style="width: 0%"></div>
+                </div>
+              </div>
+
+              <div>
+                <div class="flex justify-between font-bold mb-1">
+                  <span class="text-blue-700">درآمد نقدی (Inc):</span>
+                  <span id="chartValInc">۰</span>
+                </div>
+                <div class="w-full bg-gray-100 rounded-full h-2.5 overflow-hidden">
+                  <div id="chartBarInc" class="bg-blue-600 h-2.5 rounded-full" style="width: 0%"></div>
+                </div>
+              </div>
+
+              <div>
+                <div class="flex justify-between font-bold mb-1">
+                  <span class="text-red-700">هزینه‌های کارگاه (Exp):</span>
+                  <span id="chartValExp">۰</span>
+                </div>
+                <div class="w-full bg-gray-100 rounded-full h-2.5 overflow-hidden">
+                  <div id="chartBarExp" class="bg-red-600 h-2.5 rounded-full" style="width: 0%"></div>
+                </div>
+              </div>
+
+              <div>
+                <div class="flex justify-between font-bold mb-1">
+                  <span class="text-amber-700">پرداخت به اشخاص (Ps+Pd):</span>
+                  <span id="chartValPayouts">۰</span>
+                </div>
+                <div class="w-full bg-gray-100 rounded-full h-2.5 overflow-hidden">
+                  <div id="chartBarPayouts" class="bg-amber-600 h-2.5 rounded-full" style="width: 0%"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="mt-4 pt-3 border-t border-gray-100 text-xs text-gray-400">
+            محاسبه دقیق بر اساس روش تعهدی و نقدی استاندارد حسابداری ۴۳
+          </div>
+        </div>
+
+        <!-- Partner Share Table -->
+        <div class="lg:col-span-3 bg-white rounded-2xl border border-gray-200 p-5 shadow-xs overflow-hidden">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="font-bold text-sm text-gray-800 flex items-center gap-2">
+              <span class="text-purple-600">🤝</span>
+              <span>سهم سود شرکا و مطالبات</span>
+            </h3>
+            <span class="text-xs text-gray-500">روش تسهیم باقیمانده (Hamilton-Hare)</span>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-right text-xs">
+              <thead class="bg-gray-50 text-gray-600 font-bold border-b border-gray-200">
+                <tr>
+                  <th class="p-2.5">شخص</th>
+                  <th class="p-2.5">دستمزد/طلب</th>
+                  <th class="p-2.5">سهم سود</th>
+                  <th class="p-2.5">امانتداری جیب</th>
+                  <th class="p-2.5">خالص قابل مطالبه (Due)</th>
+                </tr>
+              </thead>
+              <tbody id="dashPartnerTable" class="divide-y divide-gray-100">
+                <tr><td colspan="5" class="p-4 text-center text-gray-400">در حال بارگذاری...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- 5. Recent Activity List -->
+      <div class="bg-white rounded-2xl border border-gray-200 p-5 shadow-xs">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="font-bold text-sm text-gray-800 flex items-center gap-2">
+            <span class="text-blue-600">⏱️</span>
+            <span>آخرین تراکنش‌های ثبت‌شده</span>
+          </h3>
+          <button onclick="switchTab('transactions')" class="text-xs text-blue-600 hover:text-blue-800 font-bold cursor-pointer">
+            مشاهده همه تراکنش‌ها ←
+          </button>
+        </div>
+        <div id="dashRecentTxList" class="divide-y divide-gray-100">
+          <div class="p-4 text-center text-gray-400 text-xs">در حال بارگذاری...</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ------------------------------------------------------------------ -->
+    <!-- Tab 1: Transactions Ledger                                         -->
+    <!-- ------------------------------------------------------------------ -->
+    <div id="tab-transactions" class="tab-pane hidden space-y-4">
+      
+      <!-- Filter & Search Toolbar -->
+      <div class="bg-white p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-gray-200 shadow-xs flex flex-col sm:flex-row gap-2 sm:gap-3 items-stretch sm:items-center justify-between">
+        <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 flex-1 min-w-0">
+          <input type="text" id="txSearchInput" placeholder="جستجو در شرح تراکنش یا طرف‌حساب..." class="border border-gray-300 rounded-xl px-3 py-1.5 sm:py-2 text-xs focus:ring-blue-500 focus:border-blue-500 w-full sm:max-w-xs md:max-w-sm">
+          <select id="txFilterType" class="border border-gray-300 rounded-xl px-2.5 py-1.5 sm:py-2 text-xs focus:ring-blue-500 focus:border-blue-500 bg-white shrink-0">
+            <option value="">همه انواع تراکنش‌ها</option>
+            <option value="work_in">کارکرد (طلب از کارفرما)</option>
+            <option value="work_out">کارکرد (بدهی به راننده/شخص)</option>
+            <option value="income">دریافتی وجه</option>
+            <option value="expense">هزینه پروژه</option>
+            <option value="payout">پرداخت به شخص</option>
+            <option value="transfer">انتقال بین حساب‌ها</option>
+          </select>
+        </div>
+        <div class="flex items-center justify-between sm:justify-end gap-2.5 sm:gap-3 text-xs text-gray-600 shrink-0">
+          <span class="whitespace-nowrap">تعداد: <strong id="txCount" class="text-gray-900 font-bold font-mono">۰</strong></span>
+          <button onclick="openNewTxModal()" class="bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-bold px-3 py-1.5 rounded-lg shadow-xs cursor-pointer flex items-center gap-1 shrink-0 whitespace-nowrap">
+            <span>+</span><span>تراکنش جدید</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Transactions Desktop Table (Desktop only) -->
+      <div class="hidden md:block bg-white rounded-2xl border border-gray-200 shadow-xs overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-right text-xs">
+            <thead class="bg-gray-100 text-gray-600 font-bold border-b border-gray-200">
+              <tr>
+                <th class="p-3">تاریخ (شمسی)</th>
+                <th class="p-3">نوع تراکنش</th>
+                <th class="p-3">مبلغ (تومان)</th>
+                <th class="p-3">طرف‌حساب / حساب</th>
+                <th class="p-3">شرح</th>
+                <th class="p-3 text-center">عملیات</th>
+              </tr>
+            </thead>
+            <tbody id="txTableBody" class="divide-y divide-gray-100">
+              <tr><td colspan="6" class="p-8 text-center text-gray-400">تراکنشی یافت نشد</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Transactions Mobile Cards (Mobile only - Thumb Friendly Cards) -->
+      <div id="txCardsMobile" class="md:hidden space-y-2.5">
+        <div class="p-8 text-center text-gray-400 bg-white rounded-2xl border border-gray-200">تراکنشی یافت نشد</div>
+      </div>
+
+    </div>
+
+    <!-- ------------------------------------------------------------------ -->
+    <!-- Tab 2: Reports & Financial Statements (with PDF/Print)             -->
+    <!-- ------------------------------------------------------------------ -->
+    <div id="tab-reports" class="tab-pane hidden space-y-6">
+      
+      <!-- Date Filter Presets Bar -->
+      <div class="bg-white p-4 rounded-2xl border border-gray-200 shadow-xs flex flex-wrap gap-2 items-center justify-between no-print">
+        <div class="flex items-center gap-2 overflow-x-auto pb-1 text-xs font-bold">
+          <span class="text-gray-500 ml-1">بازه گزارش:</span>
+          <button onclick="setReportDateFilter('all')" class="rep-date-btn px-3 py-1.5 rounded-lg bg-blue-600 text-white transition cursor-pointer" data-preset="all">همه دوره</button>
+          <button onclick="setReportDateFilter('current_month')" class="rep-date-btn px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 transition cursor-pointer" data-preset="current_month">ماه جاری</button>
+          <button onclick="setReportDateFilter('last_90_days')" class="rep-date-btn px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 transition cursor-pointer" data-preset="last_90_days">۳ ماه اخیر</button>
+          <button onclick="setReportDateFilter('current_year')" class="rep-date-btn px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 transition cursor-pointer" data-preset="current_year">سال مالی</button>
+          <button onclick="openCustomDateModal()" class="rep-date-btn px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 transition cursor-pointer" data-preset="custom">سفارشی...</button>
+        </div>
+
+        <button onclick="window.print()" class="bg-gray-800 hover:bg-gray-900 text-white text-xs font-bold px-4 py-2 rounded-xl flex items-center gap-2 shadow-xs transition cursor-pointer">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+          <span>چاپ / خروجی PDF</span>
+        </button>
+      </div>
+
+      <!-- Printable Report Sheet -->
+      <div id="reportSheet" class="print-page bg-white p-6 sm:p-8 rounded-2xl border border-gray-200 shadow-xs space-y-6">
+        
+        <div class="border-b border-gray-200 pb-4 flex justify-between items-center">
+          <div>
+            <h1 id="reportProjectName" class="text-xl font-bold text-gray-900">پروژه</h1>
+            <p id="reportPeriodLabel" class="text-xs text-gray-500 mt-1">صورت وضعیت و ترازنامه مالی بر مبنای قواعد نسخه ۳ و استاندارد ۴۳</p>
+          </div>
+          <div class="text-left text-xs text-gray-500">
+            <div>واحد پول: عدد صحیح تومان</div>
+            <div id="reportGenDate">تاریخ گزارش: ۱۴۰۵/۰۸/۱۷</div>
+          </div>
+        </div>
+
+        <!-- Comparative Profit Statement (Accrual vs Cash) -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="p-4 bg-gray-50 rounded-xl border border-gray-200">
+            <h3 class="font-bold text-xs text-gray-700 mb-2 flex items-center gap-1.5">
+              <span>📈</span>
+              <span>تراز سود کارکردی (Accrual Basis)</span>
+            </h3>
+            <div class="space-y-1.5 text-xs">
+              <div class="flex justify-between"><span>کارکرد از کارفرمایان (Win):</span><span id="repWin" class="font-bold">۰</span></div>
+              <div class="flex justify-between"><span>کارکرد اشخاص و رانندگان (Wout):</span><span id="repWout" class="font-bold text-red-600">۰</span></div>
+              <div class="flex justify-between"><span>هزینه‌های پروژه (Exp):</span><span id="repExp" class="font-bold text-red-600">۰</span></div>
+              <div class="border-t border-gray-200 pt-1.5 flex justify-between font-bold text-sm text-blue-700">
+                <span>سود کارکردی پروژه:</span><span id="repProfitAcc">۰</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="p-4 bg-gray-50 rounded-xl border border-gray-200">
+            <h3 class="font-bold text-xs text-gray-700 mb-2 flex items-center gap-1.5">
+              <span>💵</span>
+              <span>تراز نقدی پروژه (Cash Basis)</span>
+            </h3>
+            <div class="space-y-1.5 text-xs">
+              <div class="flex justify-between"><span>دریافتی‌های نقد (Inc):</span><span id="repInc" class="font-bold">۰</span></div>
+              <div class="flex justify-between"><span>هزینه‌های پرداخت‌شده (Exp):</span><span id="repCashExp" class="font-bold text-red-600">۰</span></div>
+              <div class="flex justify-between"><span>تسویه دستمزد اشخاص (Ps):</span><span id="repPs" class="font-bold text-red-600">۰</span></div>
+              <div class="border-t border-gray-200 pt-1.5 flex justify-between font-bold text-sm text-teal-700">
+                <span>سود نقدی پروژه:</span><span id="repProfitCash">۰</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Golden Equation Banner -->
+        <div class="p-4 rounded-xl border bg-green-50 border-green-200 text-green-950 text-xs">
+          <div class="font-bold text-sm flex items-center gap-2 mb-1">
+            <span>⚖️ تساوی تطبیق طلایی (Golden Balance Equation):</span>
+            <span id="repGoldenStatus">برقرار است ✓</span>
+          </div>
+          <p class="leading-relaxed">
+            مجموع موجودی حساب‌های پروژه (<span id="repEqCash" class="font-bold">۰</span>) + طلب از کارفرمایان (<span id="repEqRec" class="font-bold">۰</span>) = کل مطالبات اشخاص (<span id="repEqDue" class="font-bold">۰</span>)
+          </p>
+        </div>
+
+        <!-- Counterparty Detail Tables (Tabs) -->
+        <div class="space-y-4">
+          <div class="flex border-b border-gray-200 text-xs font-bold gap-4 no-print">
+            <button onclick="switchReportSubTab('clients')" id="subTabBtnClients" class="py-2 border-b-2 border-blue-600 text-blue-600 cursor-pointer">کارفرمایان (طلب‌ها)</button>
+            <button onclick="switchReportSubTab('payees')" id="subTabBtnPayees" class="py-2 border-b-2 border-transparent text-gray-500 hover:text-gray-800 cursor-pointer">پرسنل و رانندگان (بدهی‌ها)</button>
+            <button onclick="switchReportSubTab('partners')" id="subTabBtnPartners" class="py-2 border-b-2 border-transparent text-gray-500 hover:text-gray-800 cursor-pointer">شرکا و سود</button>
+          </div>
+
+          <!-- SubTab: Clients -->
+          <div id="subTabClients" class="space-y-2">
+            <div class="font-bold text-xs text-gray-700">صورت وضعیت طلب از کارفرمایان (Receivables):</div>
+            <table class="w-full text-right text-xs border border-gray-200 rounded-xl overflow-hidden">
+              <thead class="bg-gray-100 font-bold text-gray-600">
+                <tr>
+                  <th class="p-2.5">نام کارفرما</th>
+                  <th class="p-2.5">کارکرد ثبت‌شده (Win)</th>
+                  <th class="p-2.5">وصولی نقدی (Inc)</th>
+                  <th class="p-2.5">مانده طلب (تومان)</th>
+                </tr>
+              </thead>
+              <tbody id="repClientsTable" class="divide-y divide-gray-100">
+                <tr><td colspan="4" class="p-3 text-center text-gray-400">اطلاعاتی موجود نیست</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- SubTab: Payees -->
+          <div id="subTabPayees" class="hidden space-y-2">
+            <div class="font-bold text-xs text-gray-700">صورت وضعیت تعهدات به پرسنل و رانندگان (Payables):</div>
+            <table class="w-full text-right text-xs border border-gray-200 rounded-xl overflow-hidden">
+              <thead class="bg-gray-100 font-bold text-gray-600">
+                <tr>
+                  <th class="p-2.5">نام شخص / راننده</th>
+                  <th class="p-2.5">کارکرد تعهدی (Wout)</th>
+                  <th class="p-2.5">تسویه دستمزد (Ps)</th>
+                  <th class="p-2.5">مانده بدهی (تومان)</th>
+                </tr>
+              </thead>
+              <tbody id="repPayeesTable" class="divide-y divide-gray-100">
+                <tr><td colspan="4" class="p-3 text-center text-gray-400">اطلاعاتی موجود نیست</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- SubTab: Partners -->
+          <div id="subTabPartners" class="hidden space-y-2">
+            <div class="font-bold text-xs text-gray-700">صورت وضعیت تسهیم سود و تسویه شرکا:</div>
+            <table class="w-full text-right text-xs border border-gray-200 rounded-xl overflow-hidden">
+              <thead class="bg-gray-100 font-bold text-gray-600">
+                <tr>
+                  <th class="p-2.5">نام شریک</th>
+                  <th class="p-2.5">سهم سود تعهدی</th>
+                  <th class="p-2.5">برداشت سود (Pd)</th>
+                  <th class="p-2.5">امانتداری جیب</th>
+                  <th class="p-2.5">خالص قابل دریافت (Due)</th>
+                </tr>
+              </thead>
+              <tbody id="repPartnersTable" class="divide-y divide-gray-100">
+                <tr><td colspan="5" class="p-3 text-center text-gray-400">اطلاعاتی موجود نیست</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+        </div>
+
+        <div class="pt-6 border-t border-gray-200 flex justify-between items-center text-xs text-gray-400">
+          <div>امضای مدیر پروژه: __________________</div>
+          <div>امضای مسئول حسابداری: __________________</div>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- ------------------------------------------------------------------ -->
+    <!-- Tab 3: Persons & Counterparties                                    -->
+    <!-- ------------------------------------------------------------------ -->
+    <div id="tab-persons" class="tab-pane hidden space-y-4">
+      <div class="flex flex-wrap justify-between items-center gap-2.5 sm:gap-3">
+        
+        <!-- Filter pills matching Flutter (Scrollable on Mobile) -->
+        <div class="flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar pb-1 text-xs font-bold w-full sm:w-auto">
+          <button onclick="setPersonFilter('all')" class="person-pill-btn shrink-0 px-3 py-1.5 rounded-lg bg-blue-600 text-white cursor-pointer" data-filter="all">همه اشخاص</button>
+          <button onclick="setPersonFilter('client')" class="person-pill-btn shrink-0 px-3 py-1.5 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 cursor-pointer" data-filter="client">کارفرمایان</button>
+          <button onclick="setPersonFilter('partner')" class="person-pill-btn shrink-0 px-3 py-1.5 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 cursor-pointer" data-filter="partner">شرکا</button>
+          <button onclick="setPersonFilter('driver')" class="person-pill-btn shrink-0 px-3 py-1.5 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 cursor-pointer" data-filter="driver">رانندگان</button>
+          <button onclick="setPersonFilter('worker')" class="person-pill-btn shrink-0 px-3 py-1.5 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 cursor-pointer" data-filter="worker">کارگران و پرسنل</button>
+        </div>
+
+        <button onclick="openNewPersonModal()" class="bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-xs font-bold px-3.5 py-2 rounded-xl transition shadow-xs cursor-pointer flex items-center gap-1 shrink-0">
+          <span>+</span><span>طرف‌حساب جدید</span>
+        </button>
+      </div>
+
+      <!-- Persons Desktop Table (Desktop only) -->
+      <div class="hidden md:block bg-white rounded-2xl border border-gray-200 shadow-xs overflow-hidden">
+        <table class="w-full text-right text-xs">
+          <thead class="bg-gray-100 text-gray-600 font-bold border-b border-gray-200">
+            <tr>
+              <th class="p-3">نام و مشخصات</th>
+              <th class="p-3">نقش</th>
+              <th class="p-3">کد شناسایی</th>
+              <th class="p-3">یادداشت / تماس</th>
+              <th class="p-3">وضعیت</th>
+            </tr>
+          </thead>
+          <tbody id="personsTableBody" class="divide-y divide-gray-100">
+            <tr><td colspan="5" class="p-6 text-center text-gray-400">در حال بارگذاری...</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Persons Mobile Cards (Mobile only - Thumb Friendly Cards) -->
+      <div id="personsCardsMobile" class="md:hidden space-y-2.5">
+        <div class="p-6 text-center text-gray-400 bg-white rounded-2xl border border-gray-200">در حال بارگذاری...</div>
+      </div>
+    </div>
+
+    <!-- ------------------------------------------------------------------ -->
+    <!-- Tab: Fiscal Years & Periods (سال‌های مالی و دوره‌های حسابداری)        -->
+    <!-- ------------------------------------------------------------------ -->
+    <div id="tab-fiscal" class="tab-pane hidden space-y-6">
+
+      <!-- Fiscal Overview Banner -->
+      <div class="bg-gradient-to-r from-teal-50 to-blue-50 border border-teal-200 rounded-2xl p-5 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div class="flex items-start sm:items-center gap-3.5">
+          <div class="w-12 h-12 rounded-2xl bg-teal-600 text-white flex items-center justify-center shrink-0 shadow-sm text-xl font-bold">
+            🗓️
+          </div>
+          <div>
+            <h2 class="text-base font-bold text-gray-900">سال‌های مالی و دوره‌های حسابداری</h2>
+            <p class="text-xs text-gray-600 mt-1 leading-relaxed max-w-2xl">
+              شما می‌توانید سال مالی جدید ایجاد کنید یا در پایان دوره، با بستن سال مالی فعلی، مانده‌های نقد، مطالبات کارفرمایان و تعهدات شرکا را به صورت خودکار به عنوان سند افتتاحیه سال جدید انتقال دهید.
+            </p>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2 w-full md:w-auto shrink-0">
+          <button onclick="openNewProjectModal()" class="flex-1 md:flex-none bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition shadow-xs cursor-pointer flex items-center justify-center gap-1.5">
+            <span>+</span><span>تعریف سال مالی جدید</span>
+          </button>
+          <button onclick="openRolloverModalForActive()" class="flex-1 md:flex-none bg-teal-600 hover:bg-teal-700 active:scale-95 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition shadow-xs cursor-pointer flex items-center justify-center gap-1.5">
+            <span>🔄</span><span>بستن و انتقال دوره (Rollover)</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Fiscal Years Cards List (Matching Flutter FiscalYearsScreen) -->
+      <div class="space-y-4">
+        <div class="flex items-center justify-between">
+          <h3 class="text-sm font-bold text-gray-800 flex items-center gap-2">
+            <span>📋</span>
+            <span>فهرست دوره‌ها و سال‌های مالی</span>
+          </h3>
+          <span id="fiscalCountLabel" class="text-xs text-gray-500 font-mono">۰ دوره</span>
+        </div>
+
+        <div id="fiscalYearsCardsList" class="space-y-3.5">
+          <div class="p-8 text-center text-gray-400 bg-white rounded-2xl border border-gray-200 text-xs">
+            در حال بارگذاری وضعیت سال‌های مالی...
+          </div>
+        </div>
+      </div>
+
+      <!-- Accounting Period Rollover Explanatory Card (Accounter Guidance) -->
+      <div class="bg-white rounded-2xl border border-gray-200 p-5 shadow-xs space-y-3">
+        <h4 class="text-xs font-bold text-gray-800 flex items-center gap-1.5">
+          <span class="text-teal-600">⚖️</span>
+          <span>راهنمای بستن دوره و تراز طلایی افتتاحیه (استاندارد حسابداری ایران)</span>
+        </h4>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs text-gray-600">
+          <div class="p-3 bg-gray-50 rounded-xl border border-gray-200">
+            <strong class="text-gray-900 block mb-1">۱. انتقال موجودی نقد و بانک</strong>
+            <span>مانده حساب‌های بانکی و صندوق‌های پروژه دقیقاً با همان مبالغ به دوره جدید منتقل می‌شوند.</span>
+          </div>
+          <div class="p-3 bg-gray-50 rounded-xl border border-gray-200">
+            <strong class="text-gray-900 block mb-1">۲. مطالبات وصول‌نشده کارفرما</strong>
+            <span>مطالبات باز کارفرمایان به عنوان سند افتتاحیه طلب به سال مالی جدید انتقال می‌یابند.</span>
+          </div>
+          <div class="p-3 bg-gray-50 rounded-xl border border-gray-200">
+            <strong class="text-gray-900 block mb-1">۳. مطالبات و تعهدات شرکا (Due)</strong>
+            <span>سهم سود پرداخت‌نشده و مانده بستانکاری شرکا بدون تغییر ریالی به سال بعد منتقل می‌شود.</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ------------------------------------------------------------------ -->
+    <!-- Tab: Cash Accounts & Wallets (صندوق‌ها و حساب‌های بانکی)              -->
+    <!-- ------------------------------------------------------------------ -->
+    <div id="tab-accounts" class="tab-pane hidden space-y-6">
+
+      <!-- Accounts Banner -->
+      <div class="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl p-5 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div class="flex items-start sm:items-center gap-3.5">
+          <div class="w-12 h-12 rounded-2xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-sm text-xl font-bold">
+            💳
+          </div>
+          <div>
+            <h2 class="text-base font-bold text-gray-900">صندوق‌ها و حساب‌های بانکی</h2>
+            <p class="text-xs text-gray-600 mt-1 leading-relaxed max-w-2xl">
+              مدیریت حساب‌های بانکی پروژه، صندوق‌های نقدی کارگاه، و کیف‌پول‌های شخصی شرکا (امانت‌داری جیب شریک). کلیه دریافت‌ها و پرداخت‌ها متصل به این حساب‌ها ردیابی می‌شوند.
+            </p>
+          </div>
+        </div>
+
+        <button onclick="openNewAccountInlineForm()" class="bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition shadow-xs cursor-pointer flex items-center justify-center gap-1.5 w-full md:w-auto shrink-0">
+          <span>+</span><span>تعریف حساب یا صندوق جدید</span>
+        </button>
+      </div>
+
+      <!-- Add New Account Form (Collapsible/Inline) -->
+      <div id="newAccountInlineCard" class="hidden bg-white p-5 rounded-2xl border-2 border-blue-400 shadow-sm space-y-4">
+        <div class="flex justify-between items-center">
+          <h3 class="text-sm font-bold text-gray-900 flex items-center gap-2">
+            <span>+</span><span>تعریف حساب یا صندوق جدید</span>
+          </h3>
+          <button onclick="closeNewAccountInlineForm()" class="text-gray-400 hover:text-gray-600 text-lg cursor-pointer">&times;</button>
+        </div>
+
+        <form id="formNewAccountInline" class="space-y-3">
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label class="block font-bold text-gray-700 text-xs mb-1">نام حساب / صندوق *</label>
+              <input type="text" id="accInlineName" required placeholder="مثلاً: حساب بانک ملت پروژه، صندوق نقدی" class="w-full border border-gray-300 rounded-xl p-2.5 text-xs focus:ring-blue-500 focus:border-blue-500">
+            </div>
+            <div>
+              <label class="block font-bold text-gray-700 text-xs mb-1">نوع حساب *</label>
+              <select id="accInlineKind" onchange="toggleInlineAccountHolder()" class="w-full border border-gray-300 rounded-xl p-2.5 text-xs bg-white focus:ring-blue-500 focus:border-blue-500">
+                <option value="project">صندوق/حساب متعلق به پروژه</option>
+                <option value="personal">جیب/حساب متعلق به شخص (شریک)</option>
+              </select>
+            </div>
+            <div id="fieldInlineAccHolder" class="hidden">
+              <label class="block font-bold text-gray-700 text-xs mb-1">نگهدارنده حساب (شریک) *</label>
+              <select id="accInlineHolder" class="w-full border border-gray-300 rounded-xl p-2.5 text-xs bg-white focus:ring-blue-500 focus:border-blue-500"></select>
+            </div>
+          </div>
+          <div class="flex justify-end gap-2 pt-2">
+            <button type="button" onclick="closeNewAccountInlineForm()" class="px-4 py-2 border border-gray-300 text-gray-700 font-bold rounded-xl text-xs hover:bg-gray-100 cursor-pointer">انصراف</button>
+            <button type="submit" class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs shadow-xs cursor-pointer">ثبت و ایجاد حساب</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Accounts Table (Desktop) -->
+      <div class="hidden md:block bg-white rounded-2xl border border-gray-200 shadow-xs overflow-hidden">
+        <table class="w-full text-right text-xs">
+          <thead class="bg-gray-100 text-gray-600 font-bold border-b border-gray-200">
+            <tr>
+              <th class="p-3">نام حساب یا صندوق</th>
+              <th class="p-3">نوع حساب</th>
+              <th class="p-3">نگهدارنده / مالک</th>
+              <th class="p-3">موجودی فعلی (پروژه جاری)</th>
+              <th class="p-3 text-left">عملیات</th>
+            </tr>
+          </thead>
+          <tbody id="accountsDetailedTableBody" class="divide-y divide-gray-100">
+            <tr><td colspan="5" class="p-6 text-center text-gray-400">در حال بارگذاری حساب‌ها...</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Accounts Mobile Cards (Mobile) -->
+      <div id="accountsCardsMobile" class="md:hidden space-y-3">
+        <div class="p-6 text-center text-gray-400 bg-white rounded-2xl border border-gray-200 text-xs">
+          در حال بارگذاری حساب‌ها...
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ------------------------------------------------------------------ -->
+    <!-- Tab 4: Settings & Base Data                                        -->
+    <!-- ------------------------------------------------------------------ -->
+    <div id="tab-settings" class="tab-pane hidden space-y-6">
+
+      <!-- Base Data Quick Navigation Tiles -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <button onclick="switchTab('fiscal')" class="p-4 bg-white hover:bg-teal-50 border border-gray-200 hover:border-teal-300 rounded-2xl shadow-xs transition text-right cursor-pointer flex flex-col justify-between h-28">
+          <div class="flex items-center justify-between text-teal-600">
+            <span class="text-2xl">🗓️</span>
+            <span class="text-xs font-bold text-teal-700">دوره مالی ←</span>
+          </div>
+          <div>
+            <div class="font-bold text-gray-900 text-xs sm:text-sm">سال‌های مالی و دوره‌ها</div>
+            <div class="text-[11px] text-gray-400 mt-0.5">بستن سال و انتقال مانده‌ها</div>
+          </div>
+        </button>
+
+        <button onclick="switchTab('accounts')" class="p-4 bg-white hover:bg-blue-50 border border-gray-200 hover:border-blue-300 rounded-2xl shadow-xs transition text-right cursor-pointer flex flex-col justify-between h-28">
+          <div class="flex items-center justify-between text-blue-600">
+            <span class="text-2xl">💳</span>
+            <span class="text-xs font-bold text-blue-700">حساب‌ها ←</span>
+          </div>
+          <div>
+            <div class="font-bold text-gray-900 text-xs sm:text-sm">صندوق‌ها و بانک‌ها</div>
+            <div class="text-[11px] text-gray-400 mt-0.5">صندوق کارگاه و جیب شرکا</div>
+          </div>
+        </button>
+
+        <button onclick="switchTab('persons')" class="p-4 bg-white hover:bg-purple-50 border border-gray-200 hover:border-purple-300 rounded-2xl shadow-xs transition text-right cursor-pointer flex flex-col justify-between h-28">
+          <div class="flex items-center justify-between text-purple-600">
+            <span class="text-2xl">👥</span>
+            <span class="text-xs font-bold text-purple-700">اشخاص ←</span>
+          </div>
+          <div>
+            <div class="font-bold text-gray-900 text-xs sm:text-sm">طرف‌حساب‌ها</div>
+            <div class="text-[11px] text-gray-400 mt-0.5">کارفرما، شریک، راننده</div>
+          </div>
+        </button>
+
+        <button onclick="openExcelModal()" class="p-4 bg-white hover:bg-emerald-50 border border-gray-200 hover:border-emerald-300 rounded-2xl shadow-xs transition text-right cursor-pointer flex flex-col justify-between h-28">
+          <div class="flex items-center justify-between text-emerald-600">
+            <span class="text-2xl">📊</span>
+            <span class="text-xs font-bold text-emerald-700">اکسل ←</span>
+          </div>
+          <div>
+            <div class="font-bold text-gray-900 text-xs sm:text-sm">ورود اطلاعات از اکسل</div>
+            <div class="text-[11px] text-gray-400 mt-0.5">وارد کردن خودکار دفتر</div>
+          </div>
+        </button>
+      </div>
+
+      <!-- Partner Shares & Project Accounting Settings Card -->
+      <div class="bg-white p-5 sm:p-6 rounded-2xl border border-gray-200 shadow-xs space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 pb-3">
+          <div class="flex items-center gap-2">
+            <span class="text-xl">🤝</span>
+            <div>
+              <h3 class="text-sm font-bold text-gray-900">تنظیمات پروژه و درصد سهام شرکا</h3>
+              <p class="text-xs text-gray-500">تنظیم روش گزارش‌گیری، مبنای محاسبه سود و تعیین درصد سهام هر یک از شرکا در این پروژه</p>
+            </div>
+          </div>
+          <span id="projSettingsSavedBadge" class="hidden text-xs bg-green-100 text-green-800 font-bold px-2.5 py-1 rounded-lg">ذخیره شد ✓</span>
+        </div>
+
+        <form id="formProjectSettingsAndShares" class="space-y-4">
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+            <div>
+              <label class="block font-bold text-gray-700 mb-1">مبنای گزارش‌گیری (Report Basis)</label>
+              <select id="setReportBasis" class="w-full border border-gray-300 rounded-xl p-2.5 bg-white focus:ring-blue-500 focus:border-blue-500 text-xs">
+                <option value="both">هر دو مبنا (پیش‌فرض)</option>
+                <option value="accrual">تعهدی (درآمد کارکرد)</option>
+                <option value="cash">نقدی (دریافتی‌های نقد)</option>
+              </select>
+            </div>
+            <div>
+              <label class="block font-bold text-gray-700 mb-1">مبنای تسهیم سود (Share Basis)</label>
+              <select id="setShareBasis" class="w-full border border-gray-300 rounded-xl p-2.5 bg-white focus:ring-blue-500 focus:border-blue-500 text-xs">
+                <option value="accrual">تعهدی (بر اساس کارکرد)</option>
+                <option value="cash">نقدی (بر اساس وصولی نقد)</option>
+              </select>
+            </div>
+            <div>
+              <label class="block font-bold text-gray-700 mb-1">روش تسهیم سود (Share Method)</label>
+              <select id="setShareMethod" class="w-full border border-gray-300 rounded-xl p-2.5 bg-white focus:ring-blue-500 focus:border-blue-500 text-xs">
+                <option value="fixed_percent">درصد ثابت توافقی (سهم‌الشرکه)</option>
+                <option value="by_work">بر اساس نسبت کارکرد ثبت‌شده</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Partner Shares Table -->
+          <div class="border border-gray-200 rounded-xl overflow-hidden pt-1">
+            <div class="p-3 bg-gray-50 border-b border-gray-200 flex justify-between items-center text-xs">
+              <span class="font-bold text-gray-800">تسهیم درصد سهام شرکا (مجموع باید ۱۰۰٪ باشد):</span>
+              <span id="partnerSharesTotalBadge" class="font-bold px-2 py-0.5 rounded-md text-xs bg-gray-100 text-gray-700">مجموع: ۰٪</span>
+            </div>
+            <table class="w-full text-right text-xs">
+              <thead class="bg-gray-50 text-gray-600 font-bold border-b border-gray-200">
+                <tr>
+                  <th class="p-2.5">نام شریک</th>
+                  <th class="p-2.5">نحوه تسویه</th>
+                  <th class="p-2.5 w-32">درصد سهم (۰ تا ۱۰۰)</th>
+                </tr>
+              </thead>
+              <tbody id="partnerSharesTableBody" class="divide-y divide-gray-100">
+                <tr><td colspan="3" class="p-4 text-center text-gray-400">در حال بارگذاری شرکا...</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="flex justify-end pt-1">
+            <button type="submit" class="bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow-xs cursor-pointer transition">
+              ذخیره تنظیمات و درصد سهام شرکا
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        
+        <!-- Backup Management Card -->
+        <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-xs space-y-4">
+          <div class="flex items-center justify-between">
+            <h3 class="text-sm font-bold text-gray-900 flex items-center gap-2">
+              <span class="text-blue-600">💾</span>
+              <span>پشتیبان‌گیری پایگاه‌داده (SQLite)</span>
+            </h3>
+            <span class="text-xs px-2 py-0.5 rounded-md bg-green-50 text-green-700 font-bold border border-green-200">دارای دسترسی نوشتن ✓</span>
+          </div>
+
+          <p class="text-xs text-gray-500 leading-relaxed">
+            تهیه فایل پشتیبان اتمیک نقطه-در-زمان با فرمان <code class="font-mono bg-gray-100 px-1 py-0.5 rounded">VACUUM INTO</code> همراه با هش امنیتی SHA-256 و بررسی کامل یکپارچگی داده‌ها.
+          </p>
+
+          <div class="flex gap-2">
+            <button onclick="handleCreateBackup()" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition shadow-xs flex-1 cursor-pointer">
+              ایجاد فایل پشتیبان جدید
+            </button>
+            <button onclick="loadBackupsList()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold px-3 py-2.5 rounded-xl transition cursor-pointer" title="به‌روزرسانی فهرست">
+              🔄
+            </button>
+          </div>
+
+          <div id="backupStatus" class="text-xs text-gray-600 bg-gray-50 p-3 rounded-xl border border-gray-200 hidden"></div>
+
+          <!-- Existing Backups List -->
+          <div class="pt-2">
+            <div class="font-bold text-xs text-gray-700 mb-2">فایل‌های پشتیبان ذخیره‌شده:</div>
+            <div class="max-h-48 overflow-y-auto border border-gray-200 rounded-xl">
+              <table class="w-full text-right text-xs">
+                <thead class="bg-gray-100 text-gray-600 font-bold">
+                  <tr><th class="p-2">نام فایل</th><th class="p-2">حجم</th><th class="p-2">هش SHA-256</th></tr>
+                </thead>
+                <tbody id="backupsListBody" class="divide-y divide-gray-100">
+                  <tr><td colspan="3" class="p-3 text-center text-gray-400">در حال بارگذاری لیست...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Fiscal Years & Period Management Shortcut Card -->
+        <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-xs space-y-4">
+          <h3 class="text-sm font-bold text-gray-900 flex items-center gap-2">
+            <span class="text-teal-600">🗓️</span>
+            <span>مدیریت سال‌های مالی و بستن دوره</span>
+          </h3>
+
+          <p class="text-xs text-gray-500 leading-relaxed">
+            امکان تعریف دوره‌های مالی مجزا، بستن دوره در پایان سال، و انتقال خودکار مانده‌های نقد، مطالبات کارفرمایان و بدهی‌های پرسنل به عنوان سند افتتاحیه سال جدید.
+          </p>
+
+          <button onclick="switchTab('fiscal')" class="w-full bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition shadow-xs cursor-pointer">
+            مشاهده سال‌های مالی و انتقال دوره ←
+          </button>
+        </div>
+
+      </div>
+
+      <!-- About Us Card matching Flutter AboutUsScreen -->
+      <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-xs space-y-4">
+        <div class="flex items-center gap-3">
+          <img src="assets/karkard_logo.png" alt="Logo" class="w-12 h-12 rounded-xl border border-gray-200 object-cover" onerror="this.style.display='none'">
+          <div>
+            <h2 class="text-base font-bold text-gray-900">سامانه دفتر کارکرد (Karkard Ledger)</h2>
+            <p class="text-xs text-gray-500">نگارش ۲.۰.۰ — معماری نیتیو Rust + SQLite V3 چندسکویی (Linux, Windows, Android)</p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs bg-gray-50 p-4 rounded-xl border border-gray-200">
+          <div>
+            <span class="text-gray-400 block mb-0.5">توسعه‌دهنده:</span>
+            <strong class="text-gray-800">مهدی فیضی زاده</strong>
+          </div>
+          <div>
+            <span class="text-gray-400 block mb-0.5">وب‌سایت رسمی:</span>
+            <a href="https://mahdi.asia" target="_blank" class="text-blue-600 font-bold hover:underline">mahdi.asia</a>
+          </div>
+          <div>
+            <span class="text-gray-400 block mb-0.5">تماس:</span>
+            <span class="text-gray-800 font-mono">feizezadeh@gmail.com</span>
+          </div>
+        </div>
+
+        <div class="text-xs text-gray-600 space-y-1.5 leading-relaxed">
+          <p>• طراحی بر مبنای استاندارد حسابداری ۴۳ ایران (پیمان‌های بلندمدت و صورت‌وضعیت).</p>
+          <p>• تساوی تطبیق طلایی (Golden Balance Equation): بالانس پیوسته نقد، مطالبات و بدهی‌ها.</p>
+          <p>• روش تخصیص بزرگ‌ترین باقیمانده (Hamilton-Hare) برای تسهیم کامپیوتر دقیق سود شرکا بدون ایجاد ریال سرگردان.</p>
+          <p>• ثبت و نگهداری وقایع در لاگ غیرقابل دستکاری، عدم حذف فیزیکی تراکنش‌ها (فقط حذف نرم با ثبت الزامی دلیل).</p>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- ====================================================================== -->
+  <!-- Modals & Dialogs                                                       -->
+  <!-- ====================================================================== -->
+
+  <!-- Modal: New Transaction -->
+  <div id="modalNewTx" class="fixed inset-0 bg-gray-900/60 backdrop-blur-xs z-50 hidden flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="modal-box bg-white w-full max-w-lg rounded-t-3xl sm:rounded-2xl shadow-2xl border border-gray-200 overflow-hidden max-h-[92vh] flex flex-col">
+      <div class="w-12 h-1 bg-gray-300 rounded-full mx-auto my-2 sm:hidden shrink-0"></div>
+      <div class="p-3 sm:p-4 bg-gray-50 border-b border-gray-200 flex justify-between items-center shrink-0">
+        <h3 class="font-bold text-sm text-gray-800">ثبت تراکنش جدید</h3>
+        <button onclick="closeModal('modalNewTx')" class="text-gray-400 hover:text-gray-600 text-lg cursor-pointer p-1">&times;</button>
+      </div>
+      <form id="formNewTx" class="p-3.5 sm:p-5 space-y-3.5 sm:space-y-4 text-xs overflow-y-auto">
+        <div>
+          <label class="block font-bold text-gray-700 mb-1">نوع تراکنش *</label>
+          <select id="txInputType" onchange="updateDynamicFields()" class="w-full border border-gray-300 rounded-lg p-2 text-xs focus:ring-blue-500 focus:border-blue-500">
+            <option value="work_in">کارکرد (طلب از کارفرما)</option>
+            <option value="work_out">کارکرد (بدهی به شخص/راننده)</option>
+            <option value="income">دریافتی وجه</option>
+            <option value="expense">هزینه پروژه</option>
+            <option value="payout">پرداخت به شخص</option>
+            <option value="transfer">انتقال بین حساب‌ها</option>
+          </select>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block font-bold text-gray-700 mb-1">مبلغ (تومان) *</label>
+            <input type="text" id="txInputAmount" required placeholder="مثلاً: ۵۰٬۰۰۰٬۰۰۰" class="w-full border border-gray-300 rounded-lg p-2 text-xs focus:ring-blue-500 focus:border-blue-500">
+          </div>
+          <div>
+            <label class="block font-bold text-gray-700 mb-1">تاریخ شمسی (YYYY/MM/DD) *</label>
+            <input type="text" id="txInputDate" required placeholder="۱۴۰۵/۰۸/۱۷" class="w-full border border-gray-300 rounded-lg p-2 text-xs focus:ring-blue-500 focus:border-blue-500">
+          </div>
+        </div>
+
+        <!-- Conditional Fields -->
+        <div id="fieldClient" class="hidden">
+          <label class="block font-bold text-gray-700 mb-1">کارفرما *</label>
+          <select id="txInputClient" class="w-full border border-gray-300 rounded-lg p-2 text-xs"></select>
+        </div>
+
+        <div id="fieldPerson" class="hidden">
+          <label class="block font-bold text-gray-700 mb-1">شخص / راننده *</label>
+          <select id="txInputPerson" class="w-full border border-gray-300 rounded-lg p-2 text-xs"></select>
+        </div>
+
+        <div id="fieldCashAccount" class="hidden">
+          <label class="block font-bold text-gray-700 mb-1">حساب / صندوق *</label>
+          <select id="txInputCashAccount" class="w-full border border-gray-300 rounded-lg p-2 text-xs"></select>
+        </div>
+
+        <div id="fieldTransfer" class="hidden grid grid-cols-2 gap-3">
+          <div>
+            <label class="block font-bold text-gray-700 mb-1">از حساب *</label>
+            <select id="txInputFromAccount" class="w-full border border-gray-300 rounded-lg p-2 text-xs"></select>
+          </div>
+          <div>
+            <label class="block font-bold text-gray-700 mb-1">به حساب *</label>
+            <select id="txInputToAccount" class="w-full border border-gray-300 rounded-lg p-2 text-xs"></select>
+          </div>
+        </div>
+
+        <div id="fieldPurpose" class="hidden">
+          <label class="block font-bold text-gray-700 mb-1">هدف پرداخت *</label>
+          <select id="txInputPurpose" class="w-full border border-gray-300 rounded-lg p-2 text-xs">
+            <option value="settle_payable">تسویه دستمزد / بدهی</option>
+            <option value="distribution">برداشت از سود شریک</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block font-bold text-gray-700 mb-1">شرح تراکنش</label>
+          <input type="text" id="txInputDesc" placeholder="توضیحات و شرح عملیات..." class="w-full border border-gray-300 rounded-lg p-2 text-xs">
+        </div>
+
+        <div id="fieldOverride" class="hidden">
+          <label class="block font-bold text-yellow-800 mb-1">دلیل عبور از سقف (Override Reason)</label>
+          <input type="text" id="txInputOverride" placeholder="در صورت پرداخت بیش از سهم یا بدهی..." class="w-full border border-yellow-300 rounded-lg p-2 text-xs bg-yellow-50">
+        </div>
+
+        <div class="sticky bottom-0 bg-white pt-2.5 pb-1 border-t border-gray-100 flex justify-end gap-2 z-10 shadow-xs">
+          <button type="button" onclick="closeModal('modalNewTx')" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 transition cursor-pointer">انصراف</button>
+          <button type="submit" class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition shadow-sm cursor-pointer">ثبت تراکنش</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: New Project -->
+  <div id="modalNewProject" class="fixed inset-0 bg-gray-900/60 backdrop-blur-xs z-50 hidden flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="modal-box bg-white w-full max-w-md rounded-t-3xl sm:rounded-2xl shadow-2xl border border-gray-200 overflow-hidden max-h-[92vh] flex flex-col">
+      <div class="w-12 h-1 bg-gray-300 rounded-full mx-auto my-2 sm:hidden shrink-0"></div>
+      <div class="p-3 sm:p-4 bg-gray-50 border-b border-gray-200 flex justify-between items-center shrink-0">
+        <h3 class="font-bold text-sm text-gray-800">تعریف پروژه جدید</h3>
+        <button onclick="closeModal('modalNewProject')" class="text-gray-400 hover:text-gray-600 text-lg cursor-pointer p-1">&times;</button>
+      </div>
+      <form id="formNewProject" class="p-3.5 sm:p-5 space-y-3.5 sm:space-y-4 text-xs overflow-y-auto">
+        <div>
+          <label class="block font-bold text-gray-700 mb-1">نام پروژه *</label>
+          <input type="text" id="projInputName" required placeholder="مثلاً: پروژه کارکرد جرثقیل آذرمی" class="w-full border border-gray-300 rounded-lg p-2 text-xs focus:ring-blue-500 focus:border-blue-500">
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block font-bold text-gray-700 mb-1">تاریخ شروع</label>
+            <input type="text" id="projInputStartDate" placeholder="۱۴۰۵/۰۱/۰۱" class="w-full border border-gray-300 rounded-lg p-2 text-xs">
+          </div>
+          <div>
+            <label class="block font-bold text-gray-700 mb-1">تاریخ پایان</label>
+            <input type="text" id="projInputEndDate" placeholder="۱۴۰۵/۱۲/۲۹" class="w-full border border-gray-300 rounded-lg p-2 text-xs">
+          </div>
+        </div>
+        <div class="sticky bottom-0 bg-white pt-2.5 pb-1 border-t border-gray-100 flex justify-end gap-2 z-10 shadow-xs">
+          <button type="button" onclick="closeModal('modalNewProject')" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 cursor-pointer">انصراف</button>
+          <button type="submit" class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition shadow-sm cursor-pointer">ایجاد پروژه</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Manage Projects -->
+  <div id="modalManageProjects" class="fixed inset-0 bg-gray-900/60 backdrop-blur-xs z-50 hidden flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="modal-box bg-white w-full max-w-lg rounded-t-3xl sm:rounded-2xl shadow-2xl border border-gray-200 overflow-hidden max-h-[92vh] flex flex-col">
+      <div class="w-12 h-1 bg-gray-300 rounded-full mx-auto my-2 sm:hidden shrink-0"></div>
+      <div class="p-3 sm:p-4 bg-gray-50 border-b border-gray-200 flex justify-between items-center shrink-0">
+        <h3 class="font-bold text-sm text-gray-800">مدیریت و انتخاب پروژه فعال</h3>
+        <button onclick="closeModal('modalManageProjects')" class="text-gray-400 hover:text-gray-600 text-lg cursor-pointer p-1">&times;</button>
+      </div>
+      <div class="p-3.5 sm:p-5 space-y-3.5 sm:space-y-4 text-xs overflow-y-auto">
+        <div id="manageProjectsList" class="space-y-2 max-h-60 overflow-y-auto">
+          <!-- Dynamically populated -->
+        </div>
+        <div class="sticky bottom-0 bg-white pt-3 border-t border-gray-200 flex justify-between items-center z-10 shadow-xs">
+          <button onclick="closeModal('modalManageProjects'); openNewProjectModal();" class="text-blue-600 hover:text-blue-800 font-bold flex items-center gap-1 cursor-pointer">
+            + تعریف پروژه جدید
+          </button>
+          <button onclick="closeModal('modalManageProjects')" class="px-4 py-1.5 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 cursor-pointer">بستن</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: New Person -->
+  <div id="modalNewPerson" class="fixed inset-0 bg-gray-900/60 backdrop-blur-xs z-50 hidden flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="modal-box bg-white w-full max-w-md rounded-t-3xl sm:rounded-2xl shadow-2xl border border-gray-200 overflow-hidden max-h-[92vh] flex flex-col">
+      <div class="w-12 h-1 bg-gray-300 rounded-full mx-auto my-2 sm:hidden shrink-0"></div>
+      <div class="p-3 sm:p-4 bg-gray-50 border-b border-gray-200 flex justify-between items-center shrink-0">
+        <h3 class="font-bold text-sm text-gray-800">افزودن طرف‌حساب جدید</h3>
+        <button onclick="closeModal('modalNewPerson')" class="text-gray-400 hover:text-gray-600 text-lg cursor-pointer p-1">&times;</button>
+      </div>
+      <form id="formNewPerson" class="p-3.5 sm:p-5 space-y-3.5 sm:space-y-4 text-xs overflow-y-auto">
+        <div>
+          <label class="block font-bold text-gray-700 mb-1">نام و نام خانوادگی *</label>
+          <input type="text" id="personInputName" required placeholder="مثلاً: علی رضایی" class="w-full border border-gray-300 rounded-lg p-2 text-xs">
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block font-bold text-gray-700 mb-1">نقش *</label>
+            <select id="personInputKind" class="w-full border border-gray-300 rounded-lg p-2 text-xs">
+              <option value="partner">شریک تجاری</option>
+              <option value="client">کارفرما</option>
+              <option value="driver">راننده</option>
+              <option value="worker">کارگر / پرسنل</option>
+              <option value="other">سایر</option>
+            </select>
+          </div>
+          <div>
+            <label class="block font-bold text-gray-700 mb-1">کد شناسایی</label>
+            <input type="text" id="personInputCode" placeholder="اختیاری" class="w-full border border-gray-300 rounded-lg p-2 text-xs">
+          </div>
+        </div>
+        <div>
+          <label class="block font-bold text-gray-700 mb-1">یادداشت و تماس</label>
+          <input type="text" id="personInputNote" placeholder="توضیحات و شماره تماس..." class="w-full border border-gray-300 rounded-lg p-2 text-xs">
+        </div>
+        <div class="sticky bottom-0 bg-white pt-2.5 pb-1 border-t border-gray-100 flex justify-end gap-2 z-10 shadow-xs">
+          <button type="button" onclick="closeModal('modalNewPerson')" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 cursor-pointer">انصراف</button>
+          <button type="submit" class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg shadow-sm cursor-pointer">افزودن شخص</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Accounts Management -->
+  <div id="modalAccounts" class="fixed inset-0 bg-gray-900/60 backdrop-blur-xs z-50 hidden flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="modal-box bg-white w-full max-w-lg rounded-t-3xl sm:rounded-2xl shadow-2xl border border-gray-200 overflow-hidden max-h-[92vh] flex flex-col">
+      <div class="w-12 h-1 bg-gray-300 rounded-full mx-auto my-2 sm:hidden shrink-0"></div>
+      <div class="p-3 sm:p-4 bg-gray-50 border-b border-gray-200 flex justify-between items-center shrink-0">
+        <h3 class="font-bold text-sm text-gray-800">صندوق‌ها و حساب‌های بانکی</h3>
+        <button onclick="closeModal('modalAccounts')" class="text-gray-400 hover:text-gray-600 text-lg cursor-pointer p-1">&times;</button>
+      </div>
+      <div class="p-3.5 sm:p-5 space-y-3.5 sm:space-y-4 text-xs overflow-y-auto">
+        <div class="max-h-48 overflow-y-auto border border-gray-200 rounded-lg">
+          <table class="w-full text-right text-xs">
+            <thead class="bg-gray-100 font-bold text-gray-600">
+              <tr><th class="p-2">نام حساب</th><th class="p-2">نوع</th><th class="p-2">نگهدارنده</th></tr>
+            </thead>
+            <tbody id="accountsTableBody" class="divide-y divide-gray-100">
+              <tr><td colspan="3" class="p-4 text-center text-gray-400">در حال بارگذاری...</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <form id="formNewAccount" class="border-t border-gray-200 pt-3 space-y-3">
+          <div class="font-bold text-gray-700 text-xs">+ تعریف حساب یا صندوق جدید</div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block font-bold text-gray-700 mb-1">نام حساب *</label>
+              <input type="text" id="accInputName" required placeholder="مثلاً: صندوق کارگاه" class="w-full border border-gray-300 rounded-lg p-2 text-xs">
+            </div>
+            <div>
+              <label class="block font-bold text-gray-700 mb-1">نوع حساب *</label>
+              <select id="accInputKind" onchange="toggleAccountHolder()" class="w-full border border-gray-300 rounded-lg p-2 text-xs">
+                <option value="project">صندوق/حساب متعلق به پروژه</option>
+                <option value="personal">جیب/حساب متعلق به شخص</option>
+              </select>
+            </div>
+          </div>
+          <div id="fieldAccHolder" class="hidden">
+            <label class="block font-bold text-gray-700 mb-1">نگهدارنده حساب (شریک) *</label>
+            <select id="accInputHolder" class="w-full border border-gray-300 rounded-lg p-2 text-xs"></select>
+          </div>
+          <div class="sticky bottom-0 bg-white pt-2.5 pb-1 flex justify-end z-10 shadow-xs">
+            <button type="submit" class="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-lg shadow-sm cursor-pointer">افزودن حساب</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Excel Import Wizard (Professional 3-Step Flow) -->
+  <div id="modalExcel" class="fixed inset-0 bg-gray-900/60 backdrop-blur-xs z-50 hidden flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="modal-box bg-white w-full max-w-4xl rounded-t-3xl sm:rounded-2xl max-h-[92vh] shadow-2xl border border-gray-200 overflow-hidden flex flex-col">
+      <div class="w-12 h-1 bg-gray-300 rounded-full mx-auto my-2 sm:hidden shrink-0"></div>
+      <!-- Wizard Header & Steps Indicator -->
+      <div class="p-4 bg-gray-50 border-b border-gray-200 flex justify-between items-center shrink-0">
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 rounded-lg bg-green-600 text-white flex items-center justify-center font-bold text-sm">
+            X
+          </div>
+          <div>
+            <h3 class="font-bold text-sm text-gray-800">ورود حرفه‌ای اطلاعات از اکسل به دفتر کارکرد</h3>
+            <p class="text-[11px] text-gray-500">پارس فوق‌سریع Calamine Rust + بررسی خودکار تطبیق تراز و عدم ایجاد تکرار</p>
+          </div>
+        </div>
+        <button onclick="closeModal('modalExcel')" class="text-gray-400 hover:text-gray-600 text-lg cursor-pointer p-1">&times;</button>
+      </div>
+
+      <!-- Steps Bar -->
+      <div class="bg-gray-100 border-b border-gray-200 px-6 py-2.5 flex items-center justify-between text-xs font-bold text-gray-500">
+        <div id="wizardStepIndicator1" class="flex items-center gap-2 text-blue-600">
+          <span class="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center text-[10px]">۱</span>
+          <span>انتخاب فایل و شیت</span>
+        </div>
+        <div class="w-8 h-0.5 bg-gray-300"></div>
+        <div id="wizardStepIndicator2" class="flex items-center gap-2">
+          <span class="w-5 h-5 rounded-full bg-gray-300 text-gray-600 flex items-center justify-center text-[10px]">۲</span>
+          <span>نگاشت ستون‌ها و بازبینی ردیف‌ها</span>
+        </div>
+        <div class="w-8 h-0.5 bg-gray-300"></div>
+        <div id="wizardStepIndicator3" class="flex items-center gap-2">
+          <span class="w-5 h-5 rounded-full bg-gray-300 text-gray-600 flex items-center justify-center text-[10px]">۳</span>
+          <span>ثبت قطعی در پایگاه داده</span>
+        </div>
+      </div>
+
+      <!-- Modal Body (Scrollable) -->
+      <div class="p-6 overflow-y-auto space-y-5 text-xs flex-1">
+        
+        <!-- STEP 1: File & Sheet Selection -->
+        <div id="excelWizardStep1" class="space-y-4">
+          
+          <!-- Native File Picker Dropzone Card -->
+          <div onclick="handleBrowseExcelFile()" class="border-2 border-dashed border-blue-300 hover:border-blue-600 bg-blue-50/40 hover:bg-blue-50 rounded-2xl p-6 text-center cursor-pointer transition shadow-xs group">
+            <div class="w-14 h-14 mx-auto rounded-2xl bg-blue-600 text-white flex items-center justify-center text-2xl mb-3 shadow-md group-hover:scale-105 transition-transform">
+              📂
+            </div>
+            <h4 class="font-bold text-sm text-gray-800">برای انتخاب فایل اکسل (.xlsx یا .xls) اینجا کلیک کنید</h4>
+            <p class="text-[11px] text-gray-500 mt-1">پنجره انتخاب فایل سیستم باز می‌شود تا فایل دفتر کارکرد مورد نظرتان را انتخاب نمایید</p>
+            <button type="button" class="mt-4 bg-blue-600 group-hover:bg-blue-700 text-white font-bold px-5 py-2.5 rounded-xl text-xs shadow-sm transition pointer-events-none inline-flex items-center gap-2">
+              <span>جستجو و انتخاب فایل از رایانه</span>
+              <span>📁</span>
+            </button>
+          </div>
+
+          <!-- Hidden File Input for Web fallback -->
+          <input type="file" id="excelFileInput" accept=".xlsx, .xls" class="hidden" onchange="handleExcelFileInputChange(this)">
+
+          <!-- Selected File Display Box -->
+          <div id="excelSelectedFileBox" class="p-3.5 bg-gray-50 border border-gray-200 rounded-xl flex items-center justify-between gap-3">
+            <div class="flex items-center gap-2.5 overflow-hidden">
+              <span class="w-7 h-7 rounded-lg bg-green-100 text-green-700 font-bold flex items-center justify-center text-xs shrink-0">✓</span>
+              <div class="truncate">
+                <span class="text-[10px] text-gray-400 block">فایل انتخاب‌شده:</span>
+                <span id="excelSelectedFileDisplay" class="font-bold font-mono text-xs text-gray-800 truncate block">/home/mehdi/karkard/دفتر_کارکرد_جرثقیل_آذرمی_آماده_ورود.xlsx</span>
+              </div>
+            </div>
+            <button type="button" onclick="handleBrowseExcelFile()" class="shrink-0 text-blue-600 hover:text-blue-800 hover:bg-blue-100/60 bg-blue-50 text-xs font-bold px-3 py-1.5 rounded-lg transition cursor-pointer">
+              تغییر فایل 🔄
+            </button>
+          </div>
+
+          <!-- Hidden input storing path for backend IPC -->
+          <input type="hidden" id="excelFilePath" value="/home/mehdi/karkard/دفتر_کارکرد_جرثقیل_آذرمی_آماده_ورود.xlsx">
+
+          <div id="excelStep1SheetArea" class="hidden space-y-3 p-4 bg-gray-50 border border-gray-200 rounded-xl">
+            <div>
+              <label class="block font-bold text-gray-700 mb-1">انتخاب شیت مورد نظر برای ورود اطلاعات *</label>
+              <select id="excelSheetSelect" onchange="handleSelectExcelSheet()" class="w-full border border-gray-300 rounded-xl p-2.5 text-xs bg-white font-bold text-gray-800">
+                <!-- Dynamically populated -->
+              </select>
+            </div>
+
+            <div class="flex items-center gap-2 pt-1">
+              <input type="checkbox" id="excelHasHeader" checked class="rounded border-gray-300 text-blue-600">
+              <label for="excelHasHeader" class="text-gray-700 font-bold">سطر اول شیت حاوی عناوین ستون‌ها است (ردیف هدر)</label>
+            </div>
+          </div>
+        </div>
+
+        <!-- STEP 2: Preview & Column Mapping -->
+        <div id="excelWizardStep2" class="hidden space-y-5">
+          
+          <!-- Summary Counters Cards -->
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div class="bg-blue-50 border border-blue-200 p-3 rounded-xl">
+              <span class="text-[11px] text-blue-700 block">سطرهای معتبر آماده ورود:</span>
+              <strong id="prevValidCount" class="text-lg font-bold font-mono text-blue-900">۰</strong>
+            </div>
+            <div class="bg-green-50 border border-green-200 p-3 rounded-xl">
+              <span class="text-[11px] text-green-700 block">مجموع مبالغ تراکنش‌ها:</span>
+              <strong id="prevTotalAmount" class="text-sm font-bold font-mono text-green-900">۰ تومان</strong>
+            </div>
+            <div class="bg-amber-50 border border-amber-200 p-3 rounded-xl">
+              <span class="text-[11px] text-amber-700 block">بدون مبلغ / نادیده‌گرفته:</span>
+              <strong id="prevInvalidCount" class="text-lg font-bold font-mono text-amber-900">۰</strong>
+            </div>
+            <div class="bg-purple-50 border border-purple-200 p-3 rounded-xl">
+              <span class="text-[11px] text-purple-700 block">طرف‌حساب‌های شناسایی‌شده:</span>
+              <strong id="prevPartiesCount" class="text-lg font-bold font-mono text-purple-900">۰ نفر</strong>
+            </div>
+          </div>
+
+          <!-- Column Mappings Accordion -->
+          <details class="bg-gray-50 border border-gray-200 rounded-xl p-3">
+            <summary class="font-bold text-xs text-gray-700 cursor-pointer flex items-center justify-between">
+              <span>تنظیم نگاشت ستون‌ها (تشخیص داده شده به صورت خودکار)</span>
+              <span class="text-blue-600 text-[11px]">مشاهده / تغییر ستون‌ها ▼</span>
+            </summary>
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-3 border-t border-gray-200 mt-2">
+              <div>
+                <label class="block text-[11px] font-bold text-gray-600 mb-0.5">ستون تاریخ:</label>
+                <select id="mapColDate" class="w-full border border-gray-300 rounded-lg p-1.5 text-xs bg-white"></select>
+              </div>
+              <div>
+                <label class="block text-[11px] font-bold text-gray-600 mb-0.5">ستون شرح:</label>
+                <select id="mapColDesc" class="w-full border border-gray-300 rounded-lg p-1.5 text-xs bg-white"></select>
+              </div>
+              <div>
+                <label class="block text-[11px] font-bold text-gray-600 mb-0.5">ستون مبلغ (تومان):</label>
+                <select id="mapColAmount" class="w-full border border-gray-300 rounded-lg p-1.5 text-xs bg-white"></select>
+              </div>
+              <div>
+                <label class="block text-[11px] font-bold text-gray-600 mb-0.5">ستون نوع تراکنش:</label>
+                <select id="mapColType" class="w-full border border-gray-300 rounded-lg p-1.5 text-xs bg-white"></select>
+              </div>
+              <div>
+                <label class="block text-[11px] font-bold text-gray-600 mb-0.5">ستون طرف حساب:</label>
+                <select id="mapColParty" class="w-full border border-gray-300 rounded-lg p-1.5 text-xs bg-white"></select>
+              </div>
+              <div>
+                <label class="block text-[11px] font-bold text-gray-600 mb-0.5">ستون حساب/صندوق:</label>
+                <select id="mapColAccount" class="w-full border border-gray-300 rounded-lg p-1.5 text-xs bg-white"></select>
+              </div>
+            </div>
+          </details>
+
+          <!-- Preview Rows Table -->
+          <div>
+            <div class="font-bold text-xs text-gray-800 mb-2 flex items-center justify-between">
+              <span>پیش‌نمایش سطرهای فایل (۱۵ سطر اول):</span>
+              <span class="text-gray-400 font-mono text-[11px]">پارس سریع با Rust Calamine</span>
+            </div>
+            <div class="border border-gray-200 rounded-xl overflow-hidden max-h-56 overflow-y-auto">
+              <table class="w-full text-right text-xs">
+                <thead class="bg-gray-100 font-bold text-gray-600 border-b border-gray-200">
+                  <tr>
+                    <th class="p-2">ردیف</th>
+                    <th class="p-2">تاریخ</th>
+                    <th class="p-2">نوع</th>
+                    <th class="p-2">مبلغ (تومان)</th>
+                    <th class="p-2">طرف حساب</th>
+                    <th class="p-2">حساب</th>
+                    <th class="p-2">شرح</th>
+                    <th class="p-2 text-center">وضعیت</th>
+                  </tr>
+                </thead>
+                <tbody id="excelPreviewTableBody" class="divide-y divide-gray-100 font-mono">
+                  <!-- Dynamically populated -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- STEP 3: Commit Success Summary -->
+        <div id="excelWizardStep3" class="hidden space-y-4 py-4 text-center">
+          <div class="w-16 h-16 mx-auto rounded-full bg-green-100 text-green-700 flex items-center justify-center font-bold text-2xl">
+            ✓
+          </div>
+          <div>
+            <h4 class="text-base font-bold text-gray-900">عملیات ورود اطلاعات با موفقیت انجام شد</h4>
+            <p class="text-xs text-gray-500 mt-1">تراکنش‌ها به صورت اتمیک در پایگاه داده ثبت و ترازنامه مالی به‌روزرسانی شد.</p>
+          </div>
+
+          <div class="bg-gray-50 p-4 rounded-xl border border-gray-200 text-right space-y-2 max-w-md mx-auto text-xs">
+            <div class="flex justify-between">
+              <span class="text-gray-500">تعداد کل سطرهای پردازش‌شده:</span>
+              <strong id="resTotalProcessed" class="font-mono">۰</strong>
+            </div>
+            <div class="flex justify-between text-green-700">
+              <span>تراکنش‌های ثبت‌شده جدید:</span>
+              <strong id="resImportedCount" class="font-mono font-bold">۰</strong>
+            </div>
+            <div class="flex justify-between text-amber-700">
+              <span>سطرهای تکراری که ثبت نشدند:</span>
+              <strong id="resDuplicatesSkipped" class="font-mono">۰</strong>
+            </div>
+            <div class="flex justify-between text-gray-600">
+              <span>سطرهای بدون مبلغ (نادیده‌گرفته):</span>
+              <strong id="resInvalidSkipped" class="font-mono">۰</strong>
+            </div>
+            <div class="flex justify-between border-t border-gray-200 pt-2 text-blue-700 font-bold">
+              <span>مجموع مبالغ ثبت‌شده:</span>
+              <strong id="resTotalAmount" class="font-mono">۰ تومان</strong>
+            </div>
+            <div class="flex justify-between text-purple-700">
+              <span>طرف‌حساب‌های جدید اضافه‌شده:</span>
+              <strong id="resNewParties" class="font-mono">۰ نفر</strong>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Wizard Footer Buttons -->
+      <div class="p-4 bg-gray-50 border-t border-gray-200 flex justify-between items-center">
+        <button type="button" id="btnExcelBack" onclick="handleExcelWizardBack()" class="hidden px-4 py-2 border border-gray-300 rounded-xl text-gray-600 hover:bg-gray-100 font-bold transition cursor-pointer">
+          ← بازگشت به مرحله قبل
+        </button>
+        <button type="button" onclick="closeModal('modalExcel')" class="px-4 py-2 border border-gray-300 rounded-xl text-gray-600 hover:bg-gray-100 font-bold transition cursor-pointer">
+          انصراف
+        </button>
+
+        <div class="flex items-center gap-2">
+          <button type="button" id="btnExcelNext" onclick="handleExcelWizardNext()" class="hidden bg-blue-600 hover:bg-blue-700 text-white font-bold px-5 py-2 rounded-xl shadow-xs transition cursor-pointer">
+            مرحله بعد: بازبینی و نگاشت ستون‌ها →
+          </button>
+          <button type="button" id="btnExcelCommit" onclick="handleCommitExcelImport()" class="hidden bg-green-600 hover:bg-green-700 text-white font-bold px-6 py-2 rounded-xl shadow-sm transition cursor-pointer flex items-center gap-2">
+            <span>تأیید و وارد کردن قطعی تراکنش‌ها به دفتر ✓</span>
+          </button>
+          <button type="button" id="btnExcelFinish" onclick="handleFinishExcelImport()" class="hidden bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 py-2 rounded-xl shadow-sm transition cursor-pointer">
+            مشاهده تراکنش‌ها در دفتر روزنامه
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Modal: Fiscal Years & Period Rollover -->
+  <div id="modalFiscalYears" class="fixed inset-0 bg-gray-900/60 backdrop-blur-xs z-50 hidden flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="modal-box bg-white w-full max-w-2xl rounded-t-3xl sm:rounded-2xl shadow-2xl border border-gray-200 overflow-hidden max-h-[92vh] flex flex-col">
+      <div class="w-12 h-1 bg-gray-300 rounded-full mx-auto my-2 sm:hidden shrink-0"></div>
+      <div class="p-3 sm:p-4 bg-gray-50 border-b border-gray-200 flex justify-between items-center shrink-0">
+        <h3 class="font-bold text-sm text-gray-800">مدیریت سال‌های مالی و بستن دوره</h3>
+        <button onclick="closeModal('modalFiscalYears')" class="text-gray-400 hover:text-gray-600 text-lg cursor-pointer p-1">&times;</button>
+      </div>
+      <div class="p-3.5 sm:p-5 space-y-3.5 sm:space-y-4 text-xs overflow-y-auto">
+        <p class="text-gray-600 leading-relaxed">
+          فهرست دوره‌ها و سال‌های مالی ثبت‌شده در سامانه:
+        </p>
+        <div id="fiscalYearsList" class="space-y-3 max-h-60 overflow-y-auto">
+          <!-- Dynamically populated -->
+        </div>
+
+        <!-- Rollover Form -->
+        <form id="formRollover" class="border-t border-gray-200 pt-3.5 space-y-3">
+          <div class="font-bold text-gray-800 text-xs">بستن دوره فعلی و ایجاد سال مالی جدید:</div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block font-bold text-gray-700 mb-1">نام سال مالی جدید *</label>
+              <input type="text" id="rolloverTargetName" required placeholder="مثلاً: پروژه کارکرد سال ۱۴۰۶" class="w-full border border-gray-300 rounded-lg p-2 text-xs">
+            </div>
+            <div>
+              <label class="block font-bold text-gray-700 mb-1">تاریخ شروع (شمسی)</label>
+              <input type="text" id="rolloverStartDate" placeholder="۱۴۰۶/۰۱/۰۱" class="w-full border border-gray-300 rounded-lg p-2 text-xs">
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <input type="checkbox" id="rolloverLockSource" checked class="rounded border-gray-300 text-blue-600">
+            <label for="rolloverLockSource" class="text-gray-700 font-bold">قفل کردن دوره قبلی (غیرقابل ویرایش شدن دوره جاری)</label>
+          </div>
+          <div class="sticky bottom-0 bg-white pt-2.5 pb-1 flex justify-end z-10 shadow-xs">
+            <button type="submit" class="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-lg shadow-sm cursor-pointer">
+              انتقال مانده‌ها و افتتاح سال مالی جدید
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: About Us (Matching Flutter AboutUsScreen) -->
+  <div id="modalAbout" class="fixed inset-0 bg-gray-900/60 backdrop-blur-xs z-50 hidden flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="modal-box bg-white w-full max-w-md rounded-t-3xl sm:rounded-2xl shadow-2xl border border-gray-200 overflow-hidden max-h-[92vh] flex flex-col">
+      <div class="w-12 h-1 bg-gray-300 rounded-full mx-auto my-2 sm:hidden shrink-0"></div>
+      <div class="p-3 sm:p-4 bg-gray-50 border-b border-gray-200 flex justify-between items-center shrink-0">
+        <h3 class="font-bold text-sm text-gray-800">درباره سامانه دفتر کارکرد</h3>
+        <button onclick="closeModal('modalAbout')" class="text-gray-400 hover:text-gray-600 text-lg cursor-pointer p-1">&times;</button>
+      </div>
+      <div class="p-4 sm:p-6 space-y-4 text-xs text-center overflow-y-auto">
+        <div class="w-16 h-16 mx-auto rounded-2xl bg-blue-600 text-white flex items-center justify-center font-bold text-xl shadow-md">
+          دک
+        </div>
+        <div>
+          <h2 class="text-base font-bold text-gray-900">دفتر کارکرد (Karkard Ledger)</h2>
+          <p class="text-gray-500 mt-1">سامانه تخصصی مدیریت مالی، پیمانکاری و عملیات کارگاهی</p>
+          <span class="inline-block mt-2 px-3 py-1 bg-blue-50 text-blue-700 font-bold rounded-full border border-blue-200">نسخه ۲.۰.۰ (موتور Rust + Tauri v2)</span>
+        </div>
+
+        <div class="bg-gray-50 p-3.5 rounded-xl border border-gray-200 text-right space-y-2">
+          <div class="flex justify-between items-center">
+            <span class="text-gray-500">طراح و توسعه‌دهنده:</span>
+            <strong class="text-gray-900">مهدی فیضی زاده</strong>
+          </div>
+          <div class="flex justify-between items-center">
+            <span class="text-gray-500">وب‌سایت:</span>
+            <a href="https://mahdi.asia" target="_blank" class="text-blue-600 font-bold hover:underline">mahdi.asia</a>
+          </div>
+          <div class="flex justify-between items-center">
+            <span class="text-gray-500">پست الکترونیک:</span>
+            <span class="font-mono text-gray-800">feizezadeh@gmail.com</span>
+          </div>
+        </div>
+
+        <div class="text-gray-500 text-right text-[11px] leading-relaxed border-t border-gray-100 pt-3">
+          طراحی شده بر اساس استاندارد حسابداری ۴۳ ایران، تساوی طلایی تراز و روش تسهیم باقیمانده برای عملیات جرثقیل و ماشین‌آلات عمرانی.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Custom Date Filter -->
+  <div id="modalCustomDate" class="fixed inset-0 bg-gray-900/60 backdrop-blur-xs z-50 hidden flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="modal-box bg-white w-full max-w-sm rounded-t-3xl sm:rounded-2xl shadow-2xl border border-gray-200 overflow-hidden max-h-[92vh] flex flex-col">
+      <div class="w-12 h-1 bg-gray-300 rounded-full mx-auto my-2 sm:hidden shrink-0"></div>
+      <div class="p-3 sm:p-4 bg-gray-50 border-b border-gray-200 flex justify-between items-center shrink-0">
+        <h3 class="font-bold text-sm text-gray-800">انتخاب بازه زمانی دلخواه</h3>
+        <button onclick="closeModal('modalCustomDate')" class="text-gray-400 hover:text-gray-600 text-lg cursor-pointer p-1">&times;</button>
+      </div>
+      <form id="formCustomDate" class="p-3.5 sm:p-5 space-y-3.5 sm:space-y-4 text-xs overflow-y-auto">
+        <div>
+          <label class="block font-bold text-gray-700 mb-1">از تاریخ (شمسی) *</label>
+          <input type="text" id="custDateStart" required placeholder="۱۴۰۵/۰۱/۰۱" class="w-full border border-gray-300 rounded-lg p-2 text-xs">
+        </div>
+        <div>
+          <label class="block font-bold text-gray-700 mb-1">تا تاریخ (شمسی) *</label>
+          <input type="text" id="custDateEnd" required placeholder="۱۴۰۵/۰۸/۱۷" class="w-full border border-gray-300 rounded-lg p-2 text-xs">
+        </div>
+        <div class="sticky bottom-0 bg-white pt-2.5 pb-1 border-t border-gray-100 flex justify-end gap-2 z-10 shadow-xs">
+          <button type="button" onclick="closeModal('modalCustomDate')" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 cursor-pointer">انصراف</button>
+          <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg shadow-sm cursor-pointer">اعمال فیلتر</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Soft Delete Transaction -->
+  <div id="modalDeleteTx" class="fixed inset-0 bg-gray-900/60 backdrop-blur-xs z-50 hidden flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="modal-box bg-white w-full max-w-md rounded-t-3xl sm:rounded-2xl shadow-2xl border border-gray-200 overflow-hidden max-h-[92vh] flex flex-col">
+      <div class="w-12 h-1 bg-gray-300 rounded-full mx-auto my-2 sm:hidden shrink-0"></div>
+      <div class="p-3 sm:p-4 bg-red-50 border-b border-red-100 flex justify-between items-center text-red-800 shrink-0">
+        <h3 class="font-bold text-sm">حذف تراکنش (حذف نرم)</h3>
+        <button onclick="closeModal('modalDeleteTx')" class="text-red-400 hover:text-red-600 text-lg cursor-pointer p-1">&times;</button>
+      </div>
+      <div class="p-3.5 sm:p-5 space-y-3.5 sm:space-y-4 text-xs overflow-y-auto">
+        <p class="text-gray-600 leading-relaxed">
+          مطابق قواعد حسابداری نسخه ۳، ثبت دلیل حذف تراکنش برای ردگیری در لاگ بازرسی و حفظ تراز الزامی است:
+        </p>
+        <input type="hidden" id="deleteTxId">
+        <div>
+          <label class="block font-bold text-gray-700 mb-1">دلیل حذف تراکنش *</label>
+          <input type="text" id="deleteTxReason" required placeholder="مثلاً: اشتباه در درج مبلغ یا ردیف تکراری" class="w-full border border-gray-300 rounded-lg p-2 text-xs focus:ring-red-500 focus:border-red-500">
+        </div>
+        <div class="sticky bottom-0 bg-white pt-2.5 pb-1 border-t border-gray-100 flex justify-end gap-2 z-10 shadow-xs">
+          <button type="button" onclick="closeModal('modalDeleteTx')" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 cursor-pointer">انصراف</button>
+          <button id="btnConfirmDelete" type="button" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg shadow-sm transition cursor-pointer">تأیید و حذف تراکنش</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====================================================================== -->
+  <!-- Mobile Floating Action Button (FAB)                                    -->
+  <!-- ====================================================================== -->
+  <button id="mobileFabNewTx" onclick="openNewTxModal()" class="md:hidden fixed bottom-20 left-4 z-40 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-bold px-4 py-3 rounded-full shadow-lg flex items-center gap-2 cursor-pointer transition" style="box-shadow: 0 10px 25px -5px rgba(37, 99, 235, 0.45);">
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
+    <span class="text-xs font-bold">ثبت تراکنش</span>
+  </button>
+
+  <!-- ====================================================================== -->
+  <!-- Mobile Bottom Navigation Bar (Docked to Thumb Zone)                    -->
+  <!-- ====================================================================== -->
+  <nav class="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 shadow-2xl no-print pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+    <div class="grid grid-cols-5 h-16 items-center px-1">
+      <button class="mobile-nav-btn flex flex-col items-center justify-center gap-1 py-1 text-blue-600 transition cursor-pointer" data-tab="dashboard" onclick="switchTab('dashboard')">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+        <span class="text-[10px] font-bold">داشبورد</span>
+      </button>
+
+      <button class="mobile-nav-btn flex flex-col items-center justify-center gap-1 py-1 text-gray-500 hover:text-gray-900 transition cursor-pointer" data-tab="transactions" onclick="switchTab('transactions')">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+        <span class="text-[10px] font-bold">تراکنش‌ها</span>
+      </button>
+
+      <button class="mobile-nav-btn flex flex-col items-center justify-center gap-1 py-1 text-gray-500 hover:text-gray-900 transition cursor-pointer" data-tab="fiscal" onclick="switchTab('fiscal')">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+        <span class="text-[10px] font-bold">سال‌های مالی</span>
+      </button>
+
+      <button class="mobile-nav-btn flex flex-col items-center justify-center gap-1 py-1 text-gray-500 hover:text-gray-900 transition cursor-pointer" data-tab="reports" onclick="switchTab('reports')">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+        <span class="text-[10px] font-bold">گزارش‌ها</span>
+      </button>
+
+      <button class="mobile-nav-btn flex flex-col items-center justify-center gap-1 py-1 text-gray-500 hover:text-gray-900 transition cursor-pointer" data-tab="settings" onclick="switchTab('settings')">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+        <span class="text-[10px] font-bold">تنظیمات و پایه</span>
+      </button>
+    </div>
+  </nav>
+
+  <script src="src/app.js"></script>
+</body>
+</html>

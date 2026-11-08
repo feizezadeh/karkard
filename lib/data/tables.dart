@@ -12,6 +12,7 @@ class Persons extends Table with Stamps {
   TextColumn get name => text().withLength(min: 1, max: 200)();
   // partner | client | driver | worker | other
   TextColumn get kind => text()();
+  TextColumn get code => text().nullable()();
   TextColumn get note => text().nullable()();
   BoolColumn get isActive => boolean().withDefault(const Constant(true))();
 
@@ -46,6 +47,7 @@ class Categories extends Table with Stamps {
   TextColumn get name => text().withLength(min: 1, max: 200)();
   // expense | general
   TextColumn get kind => text()();
+  TextColumn get code => text().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -61,6 +63,7 @@ class CashAccounts extends Table with Stamps {
   TextColumn get name => text().withLength(min: 1, max: 200)();
   // project | personal
   TextColumn get kind => text()();
+  TextColumn get code => text().nullable()();
   TextColumn get holderPersonId => text().nullable().references(Persons, #id)();
 
   @override
@@ -200,6 +203,9 @@ class Receipts extends Table {
   TextColumn get id => text()();
   TextColumn get transactionId => text().references(Transactions, #id)();
   TextColumn get filePath => text()();
+  TextColumn get fileName => text().nullable()();
+  IntColumn get fileSize => integer().nullable()();
+  TextColumn get hash => text().nullable()();
   TextColumn get mime => text()();
   TextColumn get createdAt => text().clientDefault(nowIso)();
   @override

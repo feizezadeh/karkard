@@ -11,7 +11,13 @@ import 'tables.dart';
 
 part 'database.g.dart';
 
-const schemaVersionV2 = 2;
+const schemaVersionV3 = 3;
+
+final _triggerNameRegex = RegExp(r'CREATE TRIGGER\s+([a-zA-Z0-9_]+)');
+List<String> get expectedTriggerNames => _triggers
+    .map((s) => _triggerNameRegex.firstMatch(s)?.group(1))
+    .whereType<String>()
+    .toList();
 
 @DriftDatabase(tables: [
   Persons,
@@ -49,7 +55,7 @@ class AppDatabase extends _$AppDatabase {
   }
 
   @override
-  int get schemaVersion => schemaVersionV2;
+  int get schemaVersion => schemaVersionV3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -59,13 +65,17 @@ class AppDatabase extends _$AppDatabase {
             await customStatement(s);
           }
           await into(appSettings).insert(AppSettingsCompanion.insert(
-              key: 'schema_version', value: '$schemaVersionV2'));
+              key: 'schema_version', value: '$schemaVersionV3'));
           await into(appSettings).insert(AppSettingsCompanion.insert(
               key: 'unit', value: 'toman'));
         },
         onUpgrade: (m, from, to) async {
-          if (from < 2) {
-            throw LegacyDatabaseException(fromVersion: from, toVersion: to);
+          if (from < 3) {
+            throw LegacyDatabaseException(
+              fromVersion: from,
+              toVersion: to,
+              message: 'Database version $from requires reset to version $to',
+            );
           }
         },
         beforeOpen: (details) async {
@@ -73,6 +83,67 @@ class AppDatabase extends _$AppDatabase {
           final fk = await customSelect('PRAGMA foreign_keys').getSingle();
           if (fk.data.values.first != 1) {
             throw StateError('foreign_keys could not be enabled');
+          }
+
+          // In-place schema guard for receipts columns within schemaVersion = 3
+          final receiptsInfo =
+              await customSelect("PRAGMA table_info('receipts')").get();
+          final existingCols =
+              receiptsInfo.map((r) => r.data['name'] as String).toSet();
+          if (existingCols.isNotEmpty) {
+            if (!existingCols.contains('file_name')) {
+              await customStatement(
+                  'ALTER TABLE receipts ADD COLUMN file_name TEXT');
+            }
+            if (!existingCols.contains('file_size')) {
+              await customStatement(
+                  'ALTER TABLE receipts ADD COLUMN file_size INTEGER');
+            }
+            if (!existingCols.contains('hash')) {
+              await customStatement(
+                  'ALTER TABLE receipts ADD COLUMN hash TEXT');
+            }
+          }
+
+          // In-place schema guard for code column in persons, cash_accounts, and categories
+          final personsInfo =
+              await customSelect("PRAGMA table_info('persons')").get();
+          final existingPersonsCols =
+              personsInfo.map((r) => r.data['name'] as String).toSet();
+          if (existingPersonsCols.isNotEmpty && !existingPersonsCols.contains('code')) {
+            await customStatement('ALTER TABLE persons ADD COLUMN code TEXT');
+          }
+
+          final cashAccountsInfo =
+              await customSelect("PRAGMA table_info('cash_accounts')").get();
+          final existingCashCols =
+              cashAccountsInfo.map((r) => r.data['name'] as String).toSet();
+          if (existingCashCols.isNotEmpty && !existingCashCols.contains('code')) {
+            await customStatement('ALTER TABLE cash_accounts ADD COLUMN code TEXT');
+          }
+
+          final categoriesInfo =
+              await customSelect("PRAGMA table_info('categories')").get();
+          final existingCatCols =
+              categoriesInfo.map((r) => r.data['name'] as String).toSet();
+          if (existingCatCols.isNotEmpty && !existingCatCols.contains('code')) {
+            await customStatement('ALTER TABLE categories ADD COLUMN code TEXT');
+          }
+
+          // Schema drift guard: verify that all expected triggers exist in sqlite_master
+          final existingTriggers = await customSelect(
+            "SELECT name FROM sqlite_master WHERE type = 'trigger'",
+          ).get();
+          final existingNames =
+              existingTriggers.map((r) => r.data['name'] as String).toSet();
+          for (final trg in expectedTriggerNames) {
+            if (!existingNames.contains(trg)) {
+              throw LegacyDatabaseException(
+                fromVersion: details.versionBefore ?? 0,
+                toVersion: schemaVersionV3,
+                message: 'Schema drift detected: missing required trigger $trg',
+              );
+            }
           }
         },
       );
@@ -320,6 +391,39 @@ WHEN OLD.kind != NEW.kind AND EXISTS (
     AND deleted_at IS NULL
 )
 BEGIN SELECT RAISE(ABORT, 'ERR_CANNOT_CHANGE_PERSON_KIND_WITH_TX: cannot change kind of person referenced by active transactions'); END;''',
+
+  // project_persons: profit_share/both only for partner; non-partner must be payout_only; client cannot be in project_persons
+  '''
+CREATE TRIGGER trg_pp_check_person_kind_settlement_mode_insert BEFORE INSERT ON project_persons
+WHEN (
+  (NEW.settlement_mode IN ('profit_share', 'both') AND (SELECT kind FROM persons WHERE id = NEW.person_id) != 'partner')
+  OR
+  (SELECT kind FROM persons WHERE id = NEW.person_id) = 'client'
+)
+BEGIN SELECT RAISE(ABORT, 'ERR_PERSON_KIND_SETTLEMENT_MODE_MISMATCH: profit_share/both is only permitted for partner, and client cannot be in project_persons'); END;''',
+
+  '''
+CREATE TRIGGER trg_pp_check_person_kind_settlement_mode_update BEFORE UPDATE OF settlement_mode, person_id ON project_persons
+WHEN (
+  (NEW.settlement_mode IN ('profit_share', 'both') AND (SELECT kind FROM persons WHERE id = NEW.person_id) != 'partner')
+  OR
+  (SELECT kind FROM persons WHERE id = NEW.person_id) = 'client'
+)
+BEGIN SELECT RAISE(ABORT, 'ERR_PERSON_KIND_SETTLEMENT_MODE_MISMATCH: profit_share/both is only permitted for partner, and client cannot be in project_persons'); END;''',
+
+  // persons: cannot update kind to non-partner if partner has profit_share/both in project_persons; cannot update to client if in project_persons
+  '''
+CREATE TRIGGER trg_persons_check_kind_with_project_persons_update BEFORE UPDATE OF kind ON persons
+WHEN OLD.kind != NEW.kind AND (
+  (NEW.kind != 'partner' AND EXISTS (
+    SELECT 1 FROM project_persons WHERE person_id = OLD.id AND settlement_mode IN ('profit_share', 'both')
+  ))
+  OR
+  (NEW.kind = 'client' AND EXISTS (
+    SELECT 1 FROM project_persons WHERE person_id = OLD.id
+  ))
+)
+BEGIN SELECT RAISE(ABORT, 'ERR_CANNOT_CHANGE_PERSON_KIND_IN_PROJECT: cannot change person kind: person has project_persons membership incompatible with new kind'); END;''',
 
   // cannot delete person from project_persons if active transactions reference this person
   '''

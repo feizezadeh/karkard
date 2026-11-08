@@ -1,0 +1,9 @@
+[package]
+name = "karkard-cli"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+karkard-core = { path = "../karkard-core" }
+rusqlite = { version = "0.32", features = ["bundled"] }
+serde_json = "1.0"

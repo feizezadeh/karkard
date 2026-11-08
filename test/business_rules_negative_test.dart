@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:karkard/core/domain_exception.dart';
 import 'package:karkard/core/error_mapper.dart';
 import 'package:karkard/data/database.dart';
+import 'package:karkard/services/balance_service.dart';
 import 'package:drift/native.dart';
 import 'package:drift/drift.dart';
 import 'package:sqlite3/sqlite3.dart' as sqlite;
@@ -596,17 +597,29 @@ void main() {
     });
 
     test('21. demoting settlement_mode to profit_share with active work_out throws ERR_CANNOT_DEMOTE_PAYOUT_PARTNER_WITH_TX', () async {
+      await db.into(db.persons).insert(PersonsCompanion.insert(
+        id: 'prt_working',
+        name: 'Working Partner',
+        kind: 'partner',
+      ));
+      await db.into(db.projectPersons).insert(ProjectPersonsCompanion.insert(
+        projectId: 'p1',
+        personId: 'prt_working',
+        settlementMode: const Value('both'),
+        shareBp: const Value(500),
+      ));
+
       await db.into(db.transactions).insert(TransactionsCompanion.insert(
         id: 'tx_demote_wo',
         projectId: 'p1',
         type: 'work_out',
         amount: 500,
         date: '2025-03-20',
-        personId: const Value('drv'),
+        personId: const Value('prt_working'),
       ));
 
       await expectDbThrowsDomainCode(
-        () => db.customStatement("UPDATE project_persons SET settlement_mode='profit_share', share_bp=100 WHERE project_id='p1' AND person_id='drv'"),
+        () => db.customStatement("UPDATE project_persons SET settlement_mode='profit_share', share_bp=500 WHERE project_id='p1' AND person_id='prt_working'"),
         DomainErrors.cannotDemotePayoutPartnerWithTx,
       );
     });
@@ -681,23 +694,194 @@ void main() {
       expect(freePerson.kind, 'driver');
     });
 
+    test('25a. project_persons profit_share or both for non-partner throws ERR_PERSON_KIND_SETTLEMENT_MODE_MISMATCH', () async {
+      await db.into(db.persons).insert(PersonsCompanion.insert(
+        id: 'p_driver_test',
+        name: 'Driver Kind Test',
+        kind: 'driver',
+      ));
+      await db.into(db.persons).insert(PersonsCompanion.insert(
+        id: 'p_client_test',
+        name: 'Client In Project Persons Test',
+        kind: 'client',
+      ));
+
+      // Negative 1: driver cannot have profit_share in project_persons
+      await expectDbThrowsDomainCode(
+        () => db.customStatement("INSERT INTO project_persons (project_id, person_id, settlement_mode, share_bp, created_at, updated_at) VALUES ('p1', 'p_driver_test', 'profit_share', 5000, '2025-03-20', '2025-03-20')"),
+        DomainErrors.personKindSettlementModeMismatch,
+      );
+
+      // Negative 2: driver cannot have both in project_persons
+      await expectDbThrowsDomainCode(
+        () => db.customStatement("INSERT INTO project_persons (project_id, person_id, settlement_mode, share_bp, created_at, updated_at) VALUES ('p1', 'p_driver_test', 'both', 5000, '2025-03-20', '2025-03-20')"),
+        DomainErrors.personKindSettlementModeMismatch,
+      );
+
+      // Negative 3: client cannot be inserted into project_persons at all
+      await expectDbThrowsDomainCode(
+        () => db.customStatement("INSERT INTO project_persons (project_id, person_id, settlement_mode, created_at, updated_at) VALUES ('p1', 'p_client_test', 'payout_only', '2025-03-20', '2025-03-20')"),
+        DomainErrors.personKindSettlementModeMismatch,
+      );
+
+      // Positive 1: driver can have payout_only in project_persons
+      await db.customStatement("INSERT INTO project_persons (project_id, person_id, settlement_mode, created_at, updated_at) VALUES ('p1', 'p_driver_test', 'payout_only', '2025-03-20', '2025-03-20')");
+      final pp = await (db.select(db.projectPersons)..where((tbl) => tbl.projectId.equals('p1') & tbl.personId.equals('p_driver_test'))).getSingle();
+      expect(pp.settlementMode, 'payout_only');
+
+      // Negative 4: updating settlement_mode of driver from payout_only to profit_share throws
+      await expectDbThrowsDomainCode(
+        () => db.customStatement("UPDATE project_persons SET settlement_mode='profit_share', share_bp=1000 WHERE project_id='p1' AND person_id='p_driver_test'"),
+        DomainErrors.personKindSettlementModeMismatch,
+      );
+    });
+
+    test('25b. changing person kind incompatible with project_persons throws ERR_CANNOT_CHANGE_PERSON_KIND_IN_PROJECT', () async {
+      await db.into(db.persons).insert(PersonsCompanion.insert(
+        id: 'p_partner_in_proj',
+        name: 'Partner In Proj',
+        kind: 'partner',
+      ));
+      await db.customStatement("INSERT INTO project_persons (project_id, person_id, settlement_mode, share_bp, created_at, updated_at) VALUES ('p1', 'p_partner_in_proj', 'profit_share', 1000, '2025-03-20', '2025-03-20')");
+
+      // Negative 1: changing kind of partner with profit_share to driver throws
+      await expectDbThrowsDomainCode(
+        () => db.customStatement("UPDATE persons SET kind='driver' WHERE id='p_partner_in_proj'"),
+        DomainErrors.cannotChangePersonKindInProject,
+      );
+
+      // Negative 2: changing kind to client for any member of project_persons throws
+      await expectDbThrowsDomainCode(
+        () => db.customStatement("UPDATE persons SET kind='client' WHERE id='p_partner_in_proj'"),
+        DomainErrors.cannotChangePersonKindInProject,
+      );
+    });
+
     test('22. unknown error is rethrown by mapSqliteException', () {
       final customError = FormatException('Unknown test error');
       expect(() => mapSqliteException(customError), throwsA(isA<FormatException>()));
     });
   });
 
-  group('Section 6 Tests [ناتمام/وابسته به BalanceService]', () {
-    test('[ناتمام/وابسته به BalanceService] 4. distribution exceeding Share without override throws ERR_DISTRIBUTION_EXCEEDS_SHARE', () {
-      // Requires live BalanceService to compute claimable share
-    }, skip: 'وابسته به BalanceService در فاز ۱');
+  group('Section 6 Tests [تکمیل‌شده در فاز ۱ با BalanceService]', () {
+    late AppDatabase db;
+    setUp(() async {
+      db = AppDatabase(NativeDatabase.memory());
+      await db.customSelect('select 1').get();
+      await db.into(db.projects).insert(ProjectsCompanion.insert(id: 'p1', name: 'پروژه'));
+      await db.into(db.persons).insert(PersonsCompanion.insert(id: 'cli', name: 'کارفرما', kind: 'client'));
+      await db.into(db.persons).insert(PersonsCompanion.insert(id: 'prt', name: 'شریک', kind: 'partner'));
+      await db.into(db.persons).insert(PersonsCompanion.insert(id: 'drv', name: 'راننده', kind: 'driver'));
+      await db.into(db.cashAccounts).insert(CashAccountsCompanion.insert(id: 'c1', name: 'صندوق', kind: 'project'));
+      await db.into(db.projectPersons).insert(ProjectPersonsCompanion.insert(
+        projectId: 'p1',
+        personId: 'prt',
+        settlementMode: const Value('profit_share'),
+        shareBp: const Value(10000),
+      ));
+      await db.into(db.projectPersons).insert(ProjectPersonsCompanion.insert(
+        projectId: 'p1',
+        personId: 'drv',
+        settlementMode: const Value('payout_only'),
+      ));
+    });
+    tearDown(() => db.close());
 
-    test('[ناتمام/وابسته به BalanceService] 5. settle_payable exceeding Pay without override throws ERR_SETTLE_PAYABLE_EXCEEDS_PAY', () {
-      // Requires live BalanceService to compute Pay(p)
-    }, skip: 'وابسته به BalanceService در فاز ۱');
+    test('4. distribution exceeding Share without override throws ERR_DISTRIBUTION_EXCEEDS_SHARE', () async {
+      // Setup: project p1 has prt (10000 bp), cli, c1
+      // Win = 1000, Exp = 200 => Profit = 800. Share(prt) = 800.
+      await db.into(db.transactions).insert(TransactionsCompanion.insert(
+        id: 't_win',
+        projectId: 'p1',
+        type: 'work_in',
+        amount: 1000,
+        date: '2025-03-20',
+        clientId: const Value('cli'),
+      ));
+      await db.into(db.transactions).insert(TransactionsCompanion.insert(
+        id: 't_exp',
+        projectId: 'p1',
+        type: 'expense',
+        amount: 200,
+        date: '2025-03-20',
+        cashAccountId: const Value('c1'),
+      ));
+
+      final balanceService = BalanceService(db);
+
+      // Attempting to distribute 900 (> 800 claimable) without override throws ERR_DISTRIBUTION_EXCEEDS_SHARE
+      expect(
+        () => balanceService.validateTransactionForInsert(TransactionsCompanion.insert(
+          id: 'payout_over_share',
+          projectId: 'p1',
+          type: 'payout',
+          amount: 900,
+          date: '2025-03-20',
+          personId: const Value('prt'),
+          cashAccountId: const Value('c1'),
+          purpose: const Value('distribution'),
+        )),
+        throwsA(isA<DomainException>().having((e) => e.code, 'code', DomainErrors.distributionExceedsShare)),
+      );
+
+      // With overrideReason, validation succeeds without throwing
+      await balanceService.validateTransactionForInsert(TransactionsCompanion.insert(
+        id: 'payout_override_ok',
+        projectId: 'p1',
+        type: 'payout',
+        amount: 900,
+        date: '2025-03-20',
+        personId: const Value('prt'),
+        cashAccountId: const Value('c1'),
+        purpose: const Value('distribution'),
+        overrideReason: const Value('تأیید کتبی مجمع شرکا'),
+      ));
+    });
+
+    test('5. settle_payable exceeding Pay without override throws ERR_SETTLE_PAYABLE_EXCEEDS_PAY', () async {
+      // Setup: work_out = 300 for driver in p1. Pay(drv) = 300.
+      await db.into(db.transactions).insert(TransactionsCompanion.insert(
+        id: 'wo_driver',
+        projectId: 'p1',
+        type: 'work_out',
+        amount: 300,
+        date: '2025-03-20',
+        personId: const Value('drv'),
+      ));
+
+      final balanceService = BalanceService(db);
+
+      // Attempting to settle 400 (> 300 payable) without override throws ERR_SETTLE_PAYABLE_EXCEEDS_PAY
+      expect(
+        () => balanceService.validateTransactionForInsert(TransactionsCompanion.insert(
+          id: 'payout_over_pay',
+          projectId: 'p1',
+          type: 'payout',
+          amount: 400,
+          date: '2025-03-20',
+          personId: const Value('drv'),
+          cashAccountId: const Value('c1'),
+          purpose: const Value('settle_payable'),
+        )),
+        throwsA(isA<DomainException>().having((e) => e.code, 'code', DomainErrors.settlePayableExceedsPay)),
+      );
+
+      // With overrideReason, validation succeeds without throwing
+      await balanceService.validateTransactionForInsert(TransactionsCompanion.insert(
+        id: 'payout_pay_override_ok',
+        projectId: 'p1',
+        type: 'payout',
+        amount: 400,
+        date: '2025-03-20',
+        personId: const Value('drv'),
+        cashAccountId: const Value('c1'),
+        purpose: const Value('settle_payable'),
+        overrideReason: const Value('پیش‌پرداخت با موافقت مدیر پروژه'),
+      ));
+    });
   });
 
-  group('Schema v1 -> v2 Migration Strategy (LegacyDatabaseException on upgrade)', () {
+  group('Schema v1/v2 -> v3 Migration Strategy and Schema Drift Guards', () {
     test('legacy v1 database fixture throws LegacyDatabaseException on open', () async {
       final tempDir = Directory.systemTemp.createTempSync('karkard_legacy_test_');
       final dbFile = File('${tempDir.path}/legacy_v1.db');
@@ -721,15 +905,44 @@ void main() {
             ).having(
               (e) => e.toVersion,
               'toVersion',
-              2,
-            ).having(
-              (e) => e.message,
-              'message',
-              contains('نسخه آزمایشی قدیمی‌تر'),
+              3,
             )),
           );
         } finally {
           await appDb.close();
+        }
+      } finally {
+        tempDir.deleteSync(recursive: true);
+      }
+    });
+
+    test('schema drift in beforeOpen throws LegacyDatabaseException if a trigger is missing', () async {
+      final tempDir = Directory.systemTemp.createTempSync('karkard_drift_test_');
+      final dbFile = File('${tempDir.path}/drift_test.db');
+      try {
+        // 1. Create a valid DB with full schema and triggers
+        final initialDb = AppDatabase.forFile(dbFile);
+        await initialDb.customSelect('SELECT 1').get();
+        await initialDb.close();
+
+        // 2. Intentionally DROP one required trigger directly in SQLite
+        final rawDb = sqlite.sqlite3.open(dbFile.path);
+        rawDb.execute('DROP TRIGGER trg_tx_no_hard_delete;');
+        rawDb.close();
+
+        // 3. Reopening via AppDatabase must detect missing trigger in beforeOpen and throw LegacyDatabaseException
+        final driftDb = AppDatabase.forFile(dbFile);
+        try {
+          await expectLater(
+            driftDb.customSelect('SELECT 1').get(),
+            throwsA(isA<LegacyDatabaseException>().having(
+              (e) => e.message,
+              'message',
+              contains('Schema drift detected: missing required trigger trg_tx_no_hard_delete'),
+            )),
+          );
+        } finally {
+          await driftDb.close();
         }
       } finally {
         tempDir.deleteSync(recursive: true);

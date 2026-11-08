@@ -15,6 +15,17 @@ Future<void> expectDbThrowsDomainCode(Future<void> Function() action, String exp
   }
 }
 
+Matcher throwsDbError([String? pattern]) {
+  if (pattern != null) {
+    return throwsA(isA<SqliteException>().having(
+      (e) => e.toString(),
+      'message',
+      contains(pattern),
+    ));
+  }
+  return throwsA(isA<SqliteException>());
+}
+
 Future<AppDatabase> newDb() async {
   final db = AppDatabase(NativeDatabase.memory());
   await db.customSelect('select 1').get();
@@ -77,15 +88,15 @@ void main() {
       expect(row.amount, 100);
     });
 
-    test('negative: typeof(amount) float 12.5 and string 100 rejected', () async {
+    test('negative: typeof(amount) float 12.5 rejected and string 100 coerced to integer by affinity', () async {
       expect(
-        db.customStatement("INSERT INTO transactions (id, project_id, type, amount, date, cash_account_id, client_id) VALUES ('f1', 'p1', 'income', 12.5, '2025-03-20', 'acc_proj', 'cli1')"),
-        throwsA(anything),
+        db.customStatement("INSERT INTO transactions (id, project_id, type, amount, date, cash_account_id, client_id, created_at, updated_at) VALUES ('f1', 'p1', 'income', 12.5, '2025-03-20', 'acc_proj', 'cli1', 1, 1)"),
+        throwsDbError('chk_tx_amount_type'),
       );
-      expect(
-        db.customStatement("INSERT INTO transactions (id, project_id, type, amount, date, cash_account_id, client_id) VALUES ('f2', 'p1', 'income', '100', '2025-03-20', 'acc_proj', 'cli1')"),
-        throwsA(anything),
-      );
+      // SQLite integer affinity coerces text '100' to integer 100, so typeof(amount) becomes 'integer'
+      await db.customStatement("INSERT INTO transactions (id, project_id, type, amount, date, cash_account_id, client_id, created_at, updated_at) VALUES ('f2', 'p1', 'income', '100', '2025-03-20', 'acc_proj', 'cli1', 1, 1)");
+      final row = await (db.select(db.transactions)..where((t) => t.id.equals('f2'))).getSingle();
+      expect(row.amount, 100);
     });
   });
 
@@ -95,22 +106,24 @@ void main() {
       expect(p.shareBp, 5000);
     });
 
-    test('negative: share_bp float, string, >10000, or <0 rejected', () async {
+    test('negative: share_bp float, >10000, or <0 rejected; string coerced by affinity', () async {
       expect(
-        db.customStatement("INSERT INTO project_persons (project_id, person_id, settlement_mode, share_bp) VALUES ('p1', 'cli1', 'profit_share', 50.5)"),
-        throwsA(anything),
+        db.customStatement("INSERT INTO project_persons (project_id, person_id, settlement_mode, share_bp, created_at, updated_at) VALUES ('p1', 'outsider', 'profit_share', 50.5, 1, 1)"),
+        throwsDbError('chk_pp_share_bp'),
+      );
+      // SQLite integer affinity coerces text '5000' to integer 5000
+      await db.customStatement("INSERT INTO project_persons (project_id, person_id, settlement_mode, share_bp, created_at, updated_at) VALUES ('p1', 'outsider', 'profit_share', '5000', 1, 1)");
+      final pp = await (db.select(db.projectPersons)..where((p) => p.personId.equals('outsider'))).getSingle();
+      expect(pp.shareBp, 5000);
+      await db.customStatement("DELETE FROM project_persons WHERE person_id='outsider'");
+
+      expect(
+        db.customStatement("INSERT INTO project_persons (project_id, person_id, settlement_mode, share_bp, created_at, updated_at) VALUES ('p1', 'outsider', 'profit_share', 10001, 1, 1)"),
+        throwsDbError('chk_pp_share_bp'),
       );
       expect(
-        db.customStatement("INSERT INTO project_persons (project_id, person_id, settlement_mode, share_bp) VALUES ('p1', 'cli1', 'profit_share', '5000')"),
-        throwsA(anything),
-      );
-      expect(
-        db.customStatement("INSERT INTO project_persons (project_id, person_id, settlement_mode, share_bp) VALUES ('p1', 'cli1', 'profit_share', 10001)"),
-        throwsA(anything),
-      );
-      expect(
-        db.customStatement("INSERT INTO project_persons (project_id, person_id, settlement_mode, share_bp) VALUES ('p1', 'cli1', 'profit_share', -1)"),
-        throwsA(anything),
+        db.customStatement("INSERT INTO project_persons (project_id, person_id, settlement_mode, share_bp, created_at, updated_at) VALUES ('p1', 'outsider', 'profit_share', -1, 1, 1)"),
+        throwsDbError('chk_pp_share_bp'),
       );
     });
   });
@@ -133,7 +146,7 @@ void main() {
           shareBasis: const Value('cash'),
           shareMethod: const Value('by_work'),
         )),
-        throwsA(anything),
+        throwsDbError('chk_ps_by_work_requires_accrual'),
       );
     });
   });
@@ -152,7 +165,7 @@ void main() {
           kind: 'personal',
           holderPersonId: const Value(null),
         )),
-        throwsA(anything),
+        throwsDbError('chk_cash_account_holder_required'),
       );
     });
   });
@@ -181,7 +194,7 @@ void main() {
           date: '2025-03-20',
           clientId: const Value(null),
         )),
-        throwsA(anything),
+        throwsDbError('chk_tx_work_in_client_required'),
       );
     });
 
@@ -195,7 +208,7 @@ void main() {
           date: '2025-03-20',
           clientId: const Value('prt1'),
         )),
-        throwsA(anything),
+        throwsDbError('ERR_CLIENT_KIND_MISMATCH'),
       );
     });
   });
@@ -224,7 +237,7 @@ void main() {
           date: '2025-03-20',
           personId: const Value(null),
         )),
-        throwsA(anything),
+        throwsDbError('ERR_WORK_OUT_PERSON_NOT_IN_PROJECT'),
       );
     });
   });
@@ -256,7 +269,7 @@ void main() {
           cashAccountId: const Value(null),
           clientId: const Value('cli1'),
         )),
-        throwsA(anything),
+        throwsDbError('chk_tx_income_account_required'),
       );
     });
 
@@ -271,7 +284,7 @@ void main() {
           cashAccountId: const Value('acc_proj'),
           clientId: const Value(null),
         )),
-        throwsA(anything),
+        throwsDbError('chk_tx_income_client_required'),
       );
     });
 
@@ -286,7 +299,7 @@ void main() {
           cashAccountId: const Value('acc_proj'),
           clientId: const Value('drv1'), // drv1 is driver, not client
         )),
-        throwsA(anything),
+        throwsDbError('ERR_CLIENT_KIND_MISMATCH'),
       );
     });
   });
@@ -315,7 +328,7 @@ void main() {
           date: '2025-03-20',
           cashAccountId: const Value(null),
         )),
-        throwsA(anything),
+        throwsDbError('chk_tx_expense_account_required'),
       );
     });
   });
@@ -348,7 +361,7 @@ void main() {
           cashAccountId: const Value('acc_proj'),
           purpose: const Value(null),
         )),
-        throwsA(anything),
+        throwsDbError('chk_tx_payout_required_fields'),
       );
     });
 
@@ -364,7 +377,7 @@ void main() {
           cashAccountId: const Value(null),
           purpose: const Value('settle_payable'),
         )),
-        throwsA(anything),
+        throwsDbError('chk_tx_payout_required_fields'),
       );
     });
 
@@ -380,7 +393,7 @@ void main() {
           cashAccountId: const Value('acc_proj'),
           purpose: const Value('settle_payable'),
         )),
-        throwsA(anything),
+        throwsDbError('ERR_PAYOUT_PERSON_NOT_IN_PROJECT'),
       );
     });
 
@@ -396,7 +409,7 @@ void main() {
           cashAccountId: const Value('acc_proj'),
           purpose: const Value('settle_payable'),
         )),
-        throwsA(anything),
+        throwsDbError('ERR_PAYOUT_PERSON_NOT_IN_PROJECT'),
       );
     });
   });
@@ -428,7 +441,7 @@ void main() {
           fromAccountId: const Value('acc_proj'),
           toAccountId: const Value('acc_proj'),
         )),
-        throwsA(anything),
+        throwsDbError('chk_tx_transfer_accounts_required'),
       );
     });
   });
@@ -461,7 +474,7 @@ void main() {
           cashAccountId: const Value('acc_proj'),
           purpose: const Value('distribution'),
         )),
-        throwsA(anything),
+        throwsDbError('ERR_DISTRIBUTION_FOR_PAYOUT_ONLY_PERSON'),
       );
     });
 
@@ -477,7 +490,7 @@ void main() {
           cashAccountId: const Value('acc_proj'),
           purpose: const Value('distribution'),
         )),
-        throwsA(anything),
+        throwsDbError('ERR_DISTRIBUTION_FOR_PAYOUT_ONLY_PERSON'),
       );
     });
   });
@@ -516,7 +529,7 @@ void main() {
           clientId: const Value('cli1'),
           performedBy: const Value('drv1'),
         )),
-        throwsA(anything),
+        throwsDbError('ERR_PARTNER_NOT_PARTICIPATING'),
       );
     });
 
@@ -531,7 +544,7 @@ void main() {
           clientId: const Value('cli1'),
           performedBy: const Value('outsider'),
         )),
-        throwsA(anything),
+        throwsDbError('ERR_PARTNER_NOT_PARTICIPATING'),
       );
     });
 
@@ -546,7 +559,7 @@ void main() {
           personId: const Value('drv1'),
           attributedTo: const Value('outsider'),
         )),
-        throwsA(anything),
+        throwsDbError('ERR_PARTNER_NOT_PARTICIPATING'),
       );
     });
   });
@@ -582,12 +595,12 @@ void main() {
       // UPDATE project_settings -> rejected
       expect(
         db.customStatement("UPDATE project_settings SET report_basis='cash' WHERE project_id='p1'"),
-        throwsA(anything),
+        throwsDbError('ERR_PROJECT_SETTINGS_LOCKED'),
       );
       // UPDATE project_persons -> rejected
       expect(
         db.customStatement("UPDATE project_persons SET share_order=10 WHERE project_id='p1' AND person_id='prt1'"),
-        throwsA(anything),
+        throwsDbError('ERR_PROJECT_PERSONS_LOCKED'),
       );
       // INSERT project_persons -> rejected
       expect(
@@ -596,7 +609,7 @@ void main() {
           personId: 'outsider',
           settlementMode: const Value('payout_only'),
         )),
-        throwsA(anything),
+        throwsDbError('ERR_PROJECT_PERSONS_LOCKED'),
       );
     });
 
@@ -619,7 +632,7 @@ void main() {
 
       expect(
         db.customStatement("UPDATE project_persons SET settlement_mode='payout_only' WHERE project_id='p1' AND person_id='prt1'"),
-        throwsA(anything),
+        throwsDbError('ERR_CANNOT_DEMOTE_PARTNER_WITH_TRANSACTIONS'),
       );
     });
   });
@@ -633,21 +646,21 @@ void main() {
     test('negative: updating unit rejected by trigger', () async {
       expect(
         db.customStatement("UPDATE app_settings SET value='rial' WHERE key='unit'"),
-        throwsA(anything),
+        throwsDbError('ERR_UNIT_IMMUTABLE'),
       );
     });
 
     test('negative: deleting unit rejected by trigger', () async {
       expect(
         db.customStatement("DELETE FROM app_settings WHERE key='unit'"),
-        throwsA(anything),
+        throwsDbError('ERR_UNIT_IMMUTABLE'),
       );
     });
 
     test('negative: INSERT OR REPLACE unit rejected', () async {
       expect(
         db.customStatement("INSERT OR REPLACE INTO app_settings (key, value) VALUES ('unit', 'rial')"),
-        throwsA(anything),
+        throwsDbError('ERR_UNIT_IMMUTABLE'),
       );
     });
 
@@ -657,7 +670,7 @@ void main() {
           await db.customStatement("DELETE FROM app_settings WHERE key='unit'");
           await db.customStatement("INSERT INTO app_settings (key, value) VALUES ('unit', 'rial')");
         }),
-        throwsA(anything),
+        throwsDbError('ERR_UNIT_IMMUTABLE'),
       );
     });
 
@@ -670,14 +683,14 @@ void main() {
     test('negative: rename key rejected by trigger', () async {
       expect(
         db.customStatement("UPDATE app_settings SET key='unit2' WHERE key='unit'"),
-        throwsA(anything),
+        throwsDbError('ERR_APP_SETTINGS_KEY_IMMUTABLE'),
       );
     });
 
     test('negative: insert key=unit with non-toman value rejected by CHECK', () async {
       expect(
         db.customStatement("INSERT INTO app_settings (key, value) VALUES ('unit', 'rial')"),
-        throwsA(anything),
+        throwsDbError('ERR_UNIT_IMMUTABLE'),
       );
     });
   });
@@ -706,7 +719,7 @@ void main() {
           date: '2025-03-20',
           personId: const Value('outsider'),
         )),
-        throwsA(anything),
+        throwsDbError('ERR_WORK_OUT_PERSON_NOT_IN_PROJECT'),
       );
     });
 
@@ -721,7 +734,7 @@ void main() {
           date: '2025-03-20',
           personId: const Value('prt1'),
         )),
-        throwsA(anything),
+        throwsDbError('ERR_WORK_OUT_PERSON_NOT_IN_PROJECT'),
       );
     });
   });
@@ -847,7 +860,7 @@ void main() {
 
   group('Constraint 20: demote settlement_mode to profit_share forbidden when work_out or settle_payable payout exists', () {
     test('positive: demoting settlement_mode to profit_share when no work_out/settle_payable exists succeeds', () async {
-      await db.into(db.persons).insert(PersonsCompanion.insert(id: 'p_demo', name: 'شخص دمو', kind: 'worker'));
+      await db.into(db.persons).insert(PersonsCompanion.insert(id: 'p_demo', name: 'شخص دمو', kind: 'partner'));
       await db.into(db.projectPersons).insert(ProjectPersonsCompanion.insert(
         projectId: 'p1',
         personId: 'p_demo',
@@ -862,35 +875,49 @@ void main() {
     });
 
     test('negative: demoting payout_only to profit_share with active work_out rejected by trigger', () async {
+      await db.into(db.persons).insert(PersonsCompanion.insert(id: 'prt_wo', name: 'شریک کارکرد', kind: 'partner'));
+      await db.into(db.projectPersons).insert(ProjectPersonsCompanion.insert(
+        projectId: 'p1',
+        personId: 'prt_wo',
+        settlementMode: const Value('both'),
+        shareBp: const Value(100),
+      ));
       await db.into(db.transactions).insert(TransactionsCompanion.insert(
-        id: 'tx_ref_drv1_wo',
+        id: 'tx_ref_prt_wo',
         projectId: 'p1',
         type: 'work_out',
         amount: 500,
         date: '2025-03-20',
-        personId: const Value('drv1'),
+        personId: const Value('prt_wo'),
       ));
 
       await expectDbThrowsDomainCode(
-        () => db.customStatement("UPDATE project_persons SET settlement_mode='profit_share', share_bp=100 WHERE project_id='p1' AND person_id='drv1'"),
+        () => db.customStatement("UPDATE project_persons SET settlement_mode='profit_share', share_bp=100 WHERE project_id='p1' AND person_id='prt_wo'"),
         DomainErrors.cannotDemotePayoutPartnerWithTx,
       );
     });
 
     test('negative: demoting payout_only to profit_share with active settle_payable payout rejected by trigger', () async {
+      await db.into(db.persons).insert(PersonsCompanion.insert(id: 'prt_pay', name: 'شریک تسویه', kind: 'partner'));
+      await db.into(db.projectPersons).insert(ProjectPersonsCompanion.insert(
+        projectId: 'p1',
+        personId: 'prt_pay',
+        settlementMode: const Value('both'),
+        shareBp: const Value(100),
+      ));
       await db.into(db.transactions).insert(TransactionsCompanion.insert(
-        id: 'tx_ref_drv1_pay',
+        id: 'tx_ref_prt_pay',
         projectId: 'p1',
         type: 'payout',
         amount: 400,
         date: '2025-03-20',
-        personId: const Value('drv1'),
+        personId: const Value('prt_pay'),
         cashAccountId: const Value('acc_proj'),
         purpose: const Value('settle_payable'),
       ));
 
       await expectDbThrowsDomainCode(
-        () => db.customStatement("UPDATE project_persons SET settlement_mode='profit_share', share_bp=100 WHERE project_id='p1' AND person_id='drv1'"),
+        () => db.customStatement("UPDATE project_persons SET settlement_mode='profit_share', share_bp=100 WHERE project_id='p1' AND person_id='prt_pay'"),
         DomainErrors.cannotDemotePayoutPartnerWithTx,
       );
     });
@@ -928,7 +955,7 @@ void main() {
           cashAccountId: const Value('acc_proj'),
           purpose: const Value('distribution'),
         )),
-        throwsA(anything),
+        throwsDbError('ERR_SHARE_BP_SUM_NOT_10000'),
       );
     });
   });

@@ -1,0 +1,21 @@
+[package]
+name = "karkard-core"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["rlib", "cdylib"]
+
+[dependencies]
+rusqlite = { version = "0.32", features = ["bundled"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+calamine = "0.28"
+sha2 = "0.10"
+chrono = { version = "0.4", default-features = false, features = ["std", "clock", "serde"] }
+uuid = { version = "1.10", features = ["v4", "fast-rng", "serde"] }
+thiserror = "2.0"
+jni = { version = "0.21", default-features = false }
+
+[dev-dependencies]
+rand = "0.8"

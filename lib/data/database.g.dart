@@ -63,6 +63,15 @@ class $PersonsTable extends Persons with TableInfo<$PersonsTable, Person> {
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _codeMeta = const VerificationMeta('code');
+  @override
+  late final GeneratedColumn<String> code = GeneratedColumn<String>(
+    'code',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _noteMeta = const VerificationMeta('note');
   @override
   late final GeneratedColumn<String> note = GeneratedColumn<String>(
@@ -94,6 +103,7 @@ class $PersonsTable extends Persons with TableInfo<$PersonsTable, Person> {
     id,
     name,
     kind,
+    code,
     note,
     isActive,
   ];
@@ -142,6 +152,12 @@ class $PersonsTable extends Persons with TableInfo<$PersonsTable, Person> {
     } else if (isInserting) {
       context.missing(_kindMeta);
     }
+    if (data.containsKey('code')) {
+      context.handle(
+        _codeMeta,
+        code.isAcceptableOrUnknown(data['code']!, _codeMeta),
+      );
+    }
     if (data.containsKey('note')) {
       context.handle(
         _noteMeta,
@@ -183,6 +199,10 @@ class $PersonsTable extends Persons with TableInfo<$PersonsTable, Person> {
         DriftSqlType.string,
         data['${effectivePrefix}kind'],
       )!,
+      code: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}code'],
+      ),
       note: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}note'],
@@ -206,6 +226,7 @@ class Person extends DataClass implements Insertable<Person> {
   final String id;
   final String name;
   final String kind;
+  final String? code;
   final String? note;
   final bool isActive;
   const Person({
@@ -214,6 +235,7 @@ class Person extends DataClass implements Insertable<Person> {
     required this.id,
     required this.name,
     required this.kind,
+    this.code,
     this.note,
     required this.isActive,
   });
@@ -225,6 +247,9 @@ class Person extends DataClass implements Insertable<Person> {
     map['id'] = Variable<String>(id);
     map['name'] = Variable<String>(name);
     map['kind'] = Variable<String>(kind);
+    if (!nullToAbsent || code != null) {
+      map['code'] = Variable<String>(code);
+    }
     if (!nullToAbsent || note != null) {
       map['note'] = Variable<String>(note);
     }
@@ -239,6 +264,7 @@ class Person extends DataClass implements Insertable<Person> {
       id: Value(id),
       name: Value(name),
       kind: Value(kind),
+      code: code == null && nullToAbsent ? const Value.absent() : Value(code),
       note: note == null && nullToAbsent ? const Value.absent() : Value(note),
       isActive: Value(isActive),
     );
@@ -255,6 +281,7 @@ class Person extends DataClass implements Insertable<Person> {
       id: serializer.fromJson<String>(json['id']),
       name: serializer.fromJson<String>(json['name']),
       kind: serializer.fromJson<String>(json['kind']),
+      code: serializer.fromJson<String?>(json['code']),
       note: serializer.fromJson<String?>(json['note']),
       isActive: serializer.fromJson<bool>(json['isActive']),
     );
@@ -268,6 +295,7 @@ class Person extends DataClass implements Insertable<Person> {
       'id': serializer.toJson<String>(id),
       'name': serializer.toJson<String>(name),
       'kind': serializer.toJson<String>(kind),
+      'code': serializer.toJson<String?>(code),
       'note': serializer.toJson<String?>(note),
       'isActive': serializer.toJson<bool>(isActive),
     };
@@ -279,6 +307,7 @@ class Person extends DataClass implements Insertable<Person> {
     String? id,
     String? name,
     String? kind,
+    Value<String?> code = const Value.absent(),
     Value<String?> note = const Value.absent(),
     bool? isActive,
   }) => Person(
@@ -287,6 +316,7 @@ class Person extends DataClass implements Insertable<Person> {
     id: id ?? this.id,
     name: name ?? this.name,
     kind: kind ?? this.kind,
+    code: code.present ? code.value : this.code,
     note: note.present ? note.value : this.note,
     isActive: isActive ?? this.isActive,
   );
@@ -297,6 +327,7 @@ class Person extends DataClass implements Insertable<Person> {
       id: data.id.present ? data.id.value : this.id,
       name: data.name.present ? data.name.value : this.name,
       kind: data.kind.present ? data.kind.value : this.kind,
+      code: data.code.present ? data.code.value : this.code,
       note: data.note.present ? data.note.value : this.note,
       isActive: data.isActive.present ? data.isActive.value : this.isActive,
     );
@@ -310,6 +341,7 @@ class Person extends DataClass implements Insertable<Person> {
           ..write('id: $id, ')
           ..write('name: $name, ')
           ..write('kind: $kind, ')
+          ..write('code: $code, ')
           ..write('note: $note, ')
           ..write('isActive: $isActive')
           ..write(')'))
@@ -318,7 +350,7 @@ class Person extends DataClass implements Insertable<Person> {
 
   @override
   int get hashCode =>
-      Object.hash(createdAt, updatedAt, id, name, kind, note, isActive);
+      Object.hash(createdAt, updatedAt, id, name, kind, code, note, isActive);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -328,6 +360,7 @@ class Person extends DataClass implements Insertable<Person> {
           other.id == this.id &&
           other.name == this.name &&
           other.kind == this.kind &&
+          other.code == this.code &&
           other.note == this.note &&
           other.isActive == this.isActive);
 }
@@ -338,6 +371,7 @@ class PersonsCompanion extends UpdateCompanion<Person> {
   final Value<String> id;
   final Value<String> name;
   final Value<String> kind;
+  final Value<String?> code;
   final Value<String?> note;
   final Value<bool> isActive;
   final Value<int> rowid;
@@ -347,6 +381,7 @@ class PersonsCompanion extends UpdateCompanion<Person> {
     this.id = const Value.absent(),
     this.name = const Value.absent(),
     this.kind = const Value.absent(),
+    this.code = const Value.absent(),
     this.note = const Value.absent(),
     this.isActive = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -357,6 +392,7 @@ class PersonsCompanion extends UpdateCompanion<Person> {
     required String id,
     required String name,
     required String kind,
+    this.code = const Value.absent(),
     this.note = const Value.absent(),
     this.isActive = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -369,6 +405,7 @@ class PersonsCompanion extends UpdateCompanion<Person> {
     Expression<String>? id,
     Expression<String>? name,
     Expression<String>? kind,
+    Expression<String>? code,
     Expression<String>? note,
     Expression<bool>? isActive,
     Expression<int>? rowid,
@@ -379,6 +416,7 @@ class PersonsCompanion extends UpdateCompanion<Person> {
       if (id != null) 'id': id,
       if (name != null) 'name': name,
       if (kind != null) 'kind': kind,
+      if (code != null) 'code': code,
       if (note != null) 'note': note,
       if (isActive != null) 'is_active': isActive,
       if (rowid != null) 'rowid': rowid,
@@ -391,6 +429,7 @@ class PersonsCompanion extends UpdateCompanion<Person> {
     Value<String>? id,
     Value<String>? name,
     Value<String>? kind,
+    Value<String?>? code,
     Value<String?>? note,
     Value<bool>? isActive,
     Value<int>? rowid,
@@ -401,6 +440,7 @@ class PersonsCompanion extends UpdateCompanion<Person> {
       id: id ?? this.id,
       name: name ?? this.name,
       kind: kind ?? this.kind,
+      code: code ?? this.code,
       note: note ?? this.note,
       isActive: isActive ?? this.isActive,
       rowid: rowid ?? this.rowid,
@@ -425,6 +465,9 @@ class PersonsCompanion extends UpdateCompanion<Person> {
     if (kind.present) {
       map['kind'] = Variable<String>(kind.value);
     }
+    if (code.present) {
+      map['code'] = Variable<String>(code.value);
+    }
     if (note.present) {
       map['note'] = Variable<String>(note.value);
     }
@@ -445,6 +488,7 @@ class PersonsCompanion extends UpdateCompanion<Person> {
           ..write('id: $id, ')
           ..write('name: $name, ')
           ..write('kind: $kind, ')
+          ..write('code: $code, ')
           ..write('note: $note, ')
           ..write('isActive: $isActive, ')
           ..write('rowid: $rowid')
@@ -966,8 +1010,24 @@ class $CategoriesTable extends Categories
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _codeMeta = const VerificationMeta('code');
   @override
-  List<GeneratedColumn> get $columns => [createdAt, updatedAt, id, name, kind];
+  late final GeneratedColumn<String> code = GeneratedColumn<String>(
+    'code',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    createdAt,
+    updatedAt,
+    id,
+    name,
+    kind,
+    code,
+  ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -1013,6 +1073,12 @@ class $CategoriesTable extends Categories
     } else if (isInserting) {
       context.missing(_kindMeta);
     }
+    if (data.containsKey('code')) {
+      context.handle(
+        _codeMeta,
+        code.isAcceptableOrUnknown(data['code']!, _codeMeta),
+      );
+    }
     return context;
   }
 
@@ -1042,6 +1108,10 @@ class $CategoriesTable extends Categories
         DriftSqlType.string,
         data['${effectivePrefix}kind'],
       )!,
+      code: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}code'],
+      ),
     );
   }
 
@@ -1057,12 +1127,14 @@ class Category extends DataClass implements Insertable<Category> {
   final String id;
   final String name;
   final String kind;
+  final String? code;
   const Category({
     required this.createdAt,
     required this.updatedAt,
     required this.id,
     required this.name,
     required this.kind,
+    this.code,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -1072,6 +1144,9 @@ class Category extends DataClass implements Insertable<Category> {
     map['id'] = Variable<String>(id);
     map['name'] = Variable<String>(name);
     map['kind'] = Variable<String>(kind);
+    if (!nullToAbsent || code != null) {
+      map['code'] = Variable<String>(code);
+    }
     return map;
   }
 
@@ -1082,6 +1157,7 @@ class Category extends DataClass implements Insertable<Category> {
       id: Value(id),
       name: Value(name),
       kind: Value(kind),
+      code: code == null && nullToAbsent ? const Value.absent() : Value(code),
     );
   }
 
@@ -1096,6 +1172,7 @@ class Category extends DataClass implements Insertable<Category> {
       id: serializer.fromJson<String>(json['id']),
       name: serializer.fromJson<String>(json['name']),
       kind: serializer.fromJson<String>(json['kind']),
+      code: serializer.fromJson<String?>(json['code']),
     );
   }
   @override
@@ -1107,6 +1184,7 @@ class Category extends DataClass implements Insertable<Category> {
       'id': serializer.toJson<String>(id),
       'name': serializer.toJson<String>(name),
       'kind': serializer.toJson<String>(kind),
+      'code': serializer.toJson<String?>(code),
     };
   }
 
@@ -1116,12 +1194,14 @@ class Category extends DataClass implements Insertable<Category> {
     String? id,
     String? name,
     String? kind,
+    Value<String?> code = const Value.absent(),
   }) => Category(
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
     id: id ?? this.id,
     name: name ?? this.name,
     kind: kind ?? this.kind,
+    code: code.present ? code.value : this.code,
   );
   Category copyWithCompanion(CategoriesCompanion data) {
     return Category(
@@ -1130,6 +1210,7 @@ class Category extends DataClass implements Insertable<Category> {
       id: data.id.present ? data.id.value : this.id,
       name: data.name.present ? data.name.value : this.name,
       kind: data.kind.present ? data.kind.value : this.kind,
+      code: data.code.present ? data.code.value : this.code,
     );
   }
 
@@ -1140,13 +1221,14 @@ class Category extends DataClass implements Insertable<Category> {
           ..write('updatedAt: $updatedAt, ')
           ..write('id: $id, ')
           ..write('name: $name, ')
-          ..write('kind: $kind')
+          ..write('kind: $kind, ')
+          ..write('code: $code')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(createdAt, updatedAt, id, name, kind);
+  int get hashCode => Object.hash(createdAt, updatedAt, id, name, kind, code);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -1155,7 +1237,8 @@ class Category extends DataClass implements Insertable<Category> {
           other.updatedAt == this.updatedAt &&
           other.id == this.id &&
           other.name == this.name &&
-          other.kind == this.kind);
+          other.kind == this.kind &&
+          other.code == this.code);
 }
 
 class CategoriesCompanion extends UpdateCompanion<Category> {
@@ -1164,6 +1247,7 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
   final Value<String> id;
   final Value<String> name;
   final Value<String> kind;
+  final Value<String?> code;
   final Value<int> rowid;
   const CategoriesCompanion({
     this.createdAt = const Value.absent(),
@@ -1171,6 +1255,7 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
     this.id = const Value.absent(),
     this.name = const Value.absent(),
     this.kind = const Value.absent(),
+    this.code = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   CategoriesCompanion.insert({
@@ -1179,6 +1264,7 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
     required String id,
     required String name,
     required String kind,
+    this.code = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        name = Value(name),
@@ -1189,6 +1275,7 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
     Expression<String>? id,
     Expression<String>? name,
     Expression<String>? kind,
+    Expression<String>? code,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -1197,6 +1284,7 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
       if (id != null) 'id': id,
       if (name != null) 'name': name,
       if (kind != null) 'kind': kind,
+      if (code != null) 'code': code,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -1207,6 +1295,7 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
     Value<String>? id,
     Value<String>? name,
     Value<String>? kind,
+    Value<String?>? code,
     Value<int>? rowid,
   }) {
     return CategoriesCompanion(
@@ -1215,6 +1304,7 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
       id: id ?? this.id,
       name: name ?? this.name,
       kind: kind ?? this.kind,
+      code: code ?? this.code,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -1237,6 +1327,9 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
     if (kind.present) {
       map['kind'] = Variable<String>(kind.value);
     }
+    if (code.present) {
+      map['code'] = Variable<String>(code.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -1251,6 +1344,7 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
           ..write('id: $id, ')
           ..write('name: $name, ')
           ..write('kind: $kind, ')
+          ..write('code: $code, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -1318,6 +1412,15 @@ class $CashAccountsTable extends CashAccounts
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _codeMeta = const VerificationMeta('code');
+  @override
+  late final GeneratedColumn<String> code = GeneratedColumn<String>(
+    'code',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _holderPersonIdMeta = const VerificationMeta(
     'holderPersonId',
   );
@@ -1339,6 +1442,7 @@ class $CashAccountsTable extends CashAccounts
     id,
     name,
     kind,
+    code,
     holderPersonId,
   ];
   @override
@@ -1386,6 +1490,12 @@ class $CashAccountsTable extends CashAccounts
     } else if (isInserting) {
       context.missing(_kindMeta);
     }
+    if (data.containsKey('code')) {
+      context.handle(
+        _codeMeta,
+        code.isAcceptableOrUnknown(data['code']!, _codeMeta),
+      );
+    }
     if (data.containsKey('holder_person_id')) {
       context.handle(
         _holderPersonIdMeta,
@@ -1424,6 +1534,10 @@ class $CashAccountsTable extends CashAccounts
         DriftSqlType.string,
         data['${effectivePrefix}kind'],
       )!,
+      code: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}code'],
+      ),
       holderPersonId: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}holder_person_id'],
@@ -1443,6 +1557,7 @@ class CashAccount extends DataClass implements Insertable<CashAccount> {
   final String id;
   final String name;
   final String kind;
+  final String? code;
   final String? holderPersonId;
   const CashAccount({
     required this.createdAt,
@@ -1450,6 +1565,7 @@ class CashAccount extends DataClass implements Insertable<CashAccount> {
     required this.id,
     required this.name,
     required this.kind,
+    this.code,
     this.holderPersonId,
   });
   @override
@@ -1460,6 +1576,9 @@ class CashAccount extends DataClass implements Insertable<CashAccount> {
     map['id'] = Variable<String>(id);
     map['name'] = Variable<String>(name);
     map['kind'] = Variable<String>(kind);
+    if (!nullToAbsent || code != null) {
+      map['code'] = Variable<String>(code);
+    }
     if (!nullToAbsent || holderPersonId != null) {
       map['holder_person_id'] = Variable<String>(holderPersonId);
     }
@@ -1473,6 +1592,7 @@ class CashAccount extends DataClass implements Insertable<CashAccount> {
       id: Value(id),
       name: Value(name),
       kind: Value(kind),
+      code: code == null && nullToAbsent ? const Value.absent() : Value(code),
       holderPersonId: holderPersonId == null && nullToAbsent
           ? const Value.absent()
           : Value(holderPersonId),
@@ -1490,6 +1610,7 @@ class CashAccount extends DataClass implements Insertable<CashAccount> {
       id: serializer.fromJson<String>(json['id']),
       name: serializer.fromJson<String>(json['name']),
       kind: serializer.fromJson<String>(json['kind']),
+      code: serializer.fromJson<String?>(json['code']),
       holderPersonId: serializer.fromJson<String?>(json['holderPersonId']),
     );
   }
@@ -1502,6 +1623,7 @@ class CashAccount extends DataClass implements Insertable<CashAccount> {
       'id': serializer.toJson<String>(id),
       'name': serializer.toJson<String>(name),
       'kind': serializer.toJson<String>(kind),
+      'code': serializer.toJson<String?>(code),
       'holderPersonId': serializer.toJson<String?>(holderPersonId),
     };
   }
@@ -1512,6 +1634,7 @@ class CashAccount extends DataClass implements Insertable<CashAccount> {
     String? id,
     String? name,
     String? kind,
+    Value<String?> code = const Value.absent(),
     Value<String?> holderPersonId = const Value.absent(),
   }) => CashAccount(
     createdAt: createdAt ?? this.createdAt,
@@ -1519,6 +1642,7 @@ class CashAccount extends DataClass implements Insertable<CashAccount> {
     id: id ?? this.id,
     name: name ?? this.name,
     kind: kind ?? this.kind,
+    code: code.present ? code.value : this.code,
     holderPersonId: holderPersonId.present
         ? holderPersonId.value
         : this.holderPersonId,
@@ -1530,6 +1654,7 @@ class CashAccount extends DataClass implements Insertable<CashAccount> {
       id: data.id.present ? data.id.value : this.id,
       name: data.name.present ? data.name.value : this.name,
       kind: data.kind.present ? data.kind.value : this.kind,
+      code: data.code.present ? data.code.value : this.code,
       holderPersonId: data.holderPersonId.present
           ? data.holderPersonId.value
           : this.holderPersonId,
@@ -1544,6 +1669,7 @@ class CashAccount extends DataClass implements Insertable<CashAccount> {
           ..write('id: $id, ')
           ..write('name: $name, ')
           ..write('kind: $kind, ')
+          ..write('code: $code, ')
           ..write('holderPersonId: $holderPersonId')
           ..write(')'))
         .toString();
@@ -1551,7 +1677,7 @@ class CashAccount extends DataClass implements Insertable<CashAccount> {
 
   @override
   int get hashCode =>
-      Object.hash(createdAt, updatedAt, id, name, kind, holderPersonId);
+      Object.hash(createdAt, updatedAt, id, name, kind, code, holderPersonId);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -1561,6 +1687,7 @@ class CashAccount extends DataClass implements Insertable<CashAccount> {
           other.id == this.id &&
           other.name == this.name &&
           other.kind == this.kind &&
+          other.code == this.code &&
           other.holderPersonId == this.holderPersonId);
 }
 
@@ -1570,6 +1697,7 @@ class CashAccountsCompanion extends UpdateCompanion<CashAccount> {
   final Value<String> id;
   final Value<String> name;
   final Value<String> kind;
+  final Value<String?> code;
   final Value<String?> holderPersonId;
   final Value<int> rowid;
   const CashAccountsCompanion({
@@ -1578,6 +1706,7 @@ class CashAccountsCompanion extends UpdateCompanion<CashAccount> {
     this.id = const Value.absent(),
     this.name = const Value.absent(),
     this.kind = const Value.absent(),
+    this.code = const Value.absent(),
     this.holderPersonId = const Value.absent(),
     this.rowid = const Value.absent(),
   });
@@ -1587,6 +1716,7 @@ class CashAccountsCompanion extends UpdateCompanion<CashAccount> {
     required String id,
     required String name,
     required String kind,
+    this.code = const Value.absent(),
     this.holderPersonId = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
@@ -1598,6 +1728,7 @@ class CashAccountsCompanion extends UpdateCompanion<CashAccount> {
     Expression<String>? id,
     Expression<String>? name,
     Expression<String>? kind,
+    Expression<String>? code,
     Expression<String>? holderPersonId,
     Expression<int>? rowid,
   }) {
@@ -1607,6 +1738,7 @@ class CashAccountsCompanion extends UpdateCompanion<CashAccount> {
       if (id != null) 'id': id,
       if (name != null) 'name': name,
       if (kind != null) 'kind': kind,
+      if (code != null) 'code': code,
       if (holderPersonId != null) 'holder_person_id': holderPersonId,
       if (rowid != null) 'rowid': rowid,
     });
@@ -1618,6 +1750,7 @@ class CashAccountsCompanion extends UpdateCompanion<CashAccount> {
     Value<String>? id,
     Value<String>? name,
     Value<String>? kind,
+    Value<String?>? code,
     Value<String?>? holderPersonId,
     Value<int>? rowid,
   }) {
@@ -1627,6 +1760,7 @@ class CashAccountsCompanion extends UpdateCompanion<CashAccount> {
       id: id ?? this.id,
       name: name ?? this.name,
       kind: kind ?? this.kind,
+      code: code ?? this.code,
       holderPersonId: holderPersonId ?? this.holderPersonId,
       rowid: rowid ?? this.rowid,
     );
@@ -1650,6 +1784,9 @@ class CashAccountsCompanion extends UpdateCompanion<CashAccount> {
     if (kind.present) {
       map['kind'] = Variable<String>(kind.value);
     }
+    if (code.present) {
+      map['code'] = Variable<String>(code.value);
+    }
     if (holderPersonId.present) {
       map['holder_person_id'] = Variable<String>(holderPersonId.value);
     }
@@ -1667,6 +1804,7 @@ class CashAccountsCompanion extends UpdateCompanion<CashAccount> {
           ..write('id: $id, ')
           ..write('name: $name, ')
           ..write('kind: $kind, ')
+          ..write('code: $code, ')
           ..write('holderPersonId: $holderPersonId, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -3893,6 +4031,37 @@ class $ReceiptsTable extends Receipts with TableInfo<$ReceiptsTable, Receipt> {
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _fileNameMeta = const VerificationMeta(
+    'fileName',
+  );
+  @override
+  late final GeneratedColumn<String> fileName = GeneratedColumn<String>(
+    'file_name',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _fileSizeMeta = const VerificationMeta(
+    'fileSize',
+  );
+  @override
+  late final GeneratedColumn<int> fileSize = GeneratedColumn<int>(
+    'file_size',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _hashMeta = const VerificationMeta('hash');
+  @override
+  late final GeneratedColumn<String> hash = GeneratedColumn<String>(
+    'hash',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _mimeMeta = const VerificationMeta('mime');
   @override
   late final GeneratedColumn<String> mime = GeneratedColumn<String>(
@@ -3919,6 +4088,9 @@ class $ReceiptsTable extends Receipts with TableInfo<$ReceiptsTable, Receipt> {
     id,
     transactionId,
     filePath,
+    fileName,
+    fileSize,
+    hash,
     mime,
     createdAt,
   ];
@@ -3958,6 +4130,24 @@ class $ReceiptsTable extends Receipts with TableInfo<$ReceiptsTable, Receipt> {
     } else if (isInserting) {
       context.missing(_filePathMeta);
     }
+    if (data.containsKey('file_name')) {
+      context.handle(
+        _fileNameMeta,
+        fileName.isAcceptableOrUnknown(data['file_name']!, _fileNameMeta),
+      );
+    }
+    if (data.containsKey('file_size')) {
+      context.handle(
+        _fileSizeMeta,
+        fileSize.isAcceptableOrUnknown(data['file_size']!, _fileSizeMeta),
+      );
+    }
+    if (data.containsKey('hash')) {
+      context.handle(
+        _hashMeta,
+        hash.isAcceptableOrUnknown(data['hash']!, _hashMeta),
+      );
+    }
     if (data.containsKey('mime')) {
       context.handle(
         _mimeMeta,
@@ -3993,6 +4183,18 @@ class $ReceiptsTable extends Receipts with TableInfo<$ReceiptsTable, Receipt> {
         DriftSqlType.string,
         data['${effectivePrefix}file_path'],
       )!,
+      fileName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}file_name'],
+      ),
+      fileSize: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}file_size'],
+      ),
+      hash: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}hash'],
+      ),
       mime: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}mime'],
@@ -4014,12 +4216,18 @@ class Receipt extends DataClass implements Insertable<Receipt> {
   final String id;
   final String transactionId;
   final String filePath;
+  final String? fileName;
+  final int? fileSize;
+  final String? hash;
   final String mime;
   final String createdAt;
   const Receipt({
     required this.id,
     required this.transactionId,
     required this.filePath,
+    this.fileName,
+    this.fileSize,
+    this.hash,
     required this.mime,
     required this.createdAt,
   });
@@ -4029,6 +4237,15 @@ class Receipt extends DataClass implements Insertable<Receipt> {
     map['id'] = Variable<String>(id);
     map['transaction_id'] = Variable<String>(transactionId);
     map['file_path'] = Variable<String>(filePath);
+    if (!nullToAbsent || fileName != null) {
+      map['file_name'] = Variable<String>(fileName);
+    }
+    if (!nullToAbsent || fileSize != null) {
+      map['file_size'] = Variable<int>(fileSize);
+    }
+    if (!nullToAbsent || hash != null) {
+      map['hash'] = Variable<String>(hash);
+    }
     map['mime'] = Variable<String>(mime);
     map['created_at'] = Variable<String>(createdAt);
     return map;
@@ -4039,6 +4256,13 @@ class Receipt extends DataClass implements Insertable<Receipt> {
       id: Value(id),
       transactionId: Value(transactionId),
       filePath: Value(filePath),
+      fileName: fileName == null && nullToAbsent
+          ? const Value.absent()
+          : Value(fileName),
+      fileSize: fileSize == null && nullToAbsent
+          ? const Value.absent()
+          : Value(fileSize),
+      hash: hash == null && nullToAbsent ? const Value.absent() : Value(hash),
       mime: Value(mime),
       createdAt: Value(createdAt),
     );
@@ -4053,6 +4277,9 @@ class Receipt extends DataClass implements Insertable<Receipt> {
       id: serializer.fromJson<String>(json['id']),
       transactionId: serializer.fromJson<String>(json['transactionId']),
       filePath: serializer.fromJson<String>(json['filePath']),
+      fileName: serializer.fromJson<String?>(json['fileName']),
+      fileSize: serializer.fromJson<int?>(json['fileSize']),
+      hash: serializer.fromJson<String?>(json['hash']),
       mime: serializer.fromJson<String>(json['mime']),
       createdAt: serializer.fromJson<String>(json['createdAt']),
     );
@@ -4064,6 +4291,9 @@ class Receipt extends DataClass implements Insertable<Receipt> {
       'id': serializer.toJson<String>(id),
       'transactionId': serializer.toJson<String>(transactionId),
       'filePath': serializer.toJson<String>(filePath),
+      'fileName': serializer.toJson<String?>(fileName),
+      'fileSize': serializer.toJson<int?>(fileSize),
+      'hash': serializer.toJson<String?>(hash),
       'mime': serializer.toJson<String>(mime),
       'createdAt': serializer.toJson<String>(createdAt),
     };
@@ -4073,12 +4303,18 @@ class Receipt extends DataClass implements Insertable<Receipt> {
     String? id,
     String? transactionId,
     String? filePath,
+    Value<String?> fileName = const Value.absent(),
+    Value<int?> fileSize = const Value.absent(),
+    Value<String?> hash = const Value.absent(),
     String? mime,
     String? createdAt,
   }) => Receipt(
     id: id ?? this.id,
     transactionId: transactionId ?? this.transactionId,
     filePath: filePath ?? this.filePath,
+    fileName: fileName.present ? fileName.value : this.fileName,
+    fileSize: fileSize.present ? fileSize.value : this.fileSize,
+    hash: hash.present ? hash.value : this.hash,
     mime: mime ?? this.mime,
     createdAt: createdAt ?? this.createdAt,
   );
@@ -4089,6 +4325,9 @@ class Receipt extends DataClass implements Insertable<Receipt> {
           ? data.transactionId.value
           : this.transactionId,
       filePath: data.filePath.present ? data.filePath.value : this.filePath,
+      fileName: data.fileName.present ? data.fileName.value : this.fileName,
+      fileSize: data.fileSize.present ? data.fileSize.value : this.fileSize,
+      hash: data.hash.present ? data.hash.value : this.hash,
       mime: data.mime.present ? data.mime.value : this.mime,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
     );
@@ -4100,6 +4339,9 @@ class Receipt extends DataClass implements Insertable<Receipt> {
           ..write('id: $id, ')
           ..write('transactionId: $transactionId, ')
           ..write('filePath: $filePath, ')
+          ..write('fileName: $fileName, ')
+          ..write('fileSize: $fileSize, ')
+          ..write('hash: $hash, ')
           ..write('mime: $mime, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
@@ -4107,7 +4349,16 @@ class Receipt extends DataClass implements Insertable<Receipt> {
   }
 
   @override
-  int get hashCode => Object.hash(id, transactionId, filePath, mime, createdAt);
+  int get hashCode => Object.hash(
+    id,
+    transactionId,
+    filePath,
+    fileName,
+    fileSize,
+    hash,
+    mime,
+    createdAt,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -4115,6 +4366,9 @@ class Receipt extends DataClass implements Insertable<Receipt> {
           other.id == this.id &&
           other.transactionId == this.transactionId &&
           other.filePath == this.filePath &&
+          other.fileName == this.fileName &&
+          other.fileSize == this.fileSize &&
+          other.hash == this.hash &&
           other.mime == this.mime &&
           other.createdAt == this.createdAt);
 }
@@ -4123,6 +4377,9 @@ class ReceiptsCompanion extends UpdateCompanion<Receipt> {
   final Value<String> id;
   final Value<String> transactionId;
   final Value<String> filePath;
+  final Value<String?> fileName;
+  final Value<int?> fileSize;
+  final Value<String?> hash;
   final Value<String> mime;
   final Value<String> createdAt;
   final Value<int> rowid;
@@ -4130,6 +4387,9 @@ class ReceiptsCompanion extends UpdateCompanion<Receipt> {
     this.id = const Value.absent(),
     this.transactionId = const Value.absent(),
     this.filePath = const Value.absent(),
+    this.fileName = const Value.absent(),
+    this.fileSize = const Value.absent(),
+    this.hash = const Value.absent(),
     this.mime = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -4138,6 +4398,9 @@ class ReceiptsCompanion extends UpdateCompanion<Receipt> {
     required String id,
     required String transactionId,
     required String filePath,
+    this.fileName = const Value.absent(),
+    this.fileSize = const Value.absent(),
+    this.hash = const Value.absent(),
     required String mime,
     this.createdAt = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -4149,6 +4412,9 @@ class ReceiptsCompanion extends UpdateCompanion<Receipt> {
     Expression<String>? id,
     Expression<String>? transactionId,
     Expression<String>? filePath,
+    Expression<String>? fileName,
+    Expression<int>? fileSize,
+    Expression<String>? hash,
     Expression<String>? mime,
     Expression<String>? createdAt,
     Expression<int>? rowid,
@@ -4157,6 +4423,9 @@ class ReceiptsCompanion extends UpdateCompanion<Receipt> {
       if (id != null) 'id': id,
       if (transactionId != null) 'transaction_id': transactionId,
       if (filePath != null) 'file_path': filePath,
+      if (fileName != null) 'file_name': fileName,
+      if (fileSize != null) 'file_size': fileSize,
+      if (hash != null) 'hash': hash,
       if (mime != null) 'mime': mime,
       if (createdAt != null) 'created_at': createdAt,
       if (rowid != null) 'rowid': rowid,
@@ -4167,6 +4436,9 @@ class ReceiptsCompanion extends UpdateCompanion<Receipt> {
     Value<String>? id,
     Value<String>? transactionId,
     Value<String>? filePath,
+    Value<String?>? fileName,
+    Value<int?>? fileSize,
+    Value<String?>? hash,
     Value<String>? mime,
     Value<String>? createdAt,
     Value<int>? rowid,
@@ -4175,6 +4447,9 @@ class ReceiptsCompanion extends UpdateCompanion<Receipt> {
       id: id ?? this.id,
       transactionId: transactionId ?? this.transactionId,
       filePath: filePath ?? this.filePath,
+      fileName: fileName ?? this.fileName,
+      fileSize: fileSize ?? this.fileSize,
+      hash: hash ?? this.hash,
       mime: mime ?? this.mime,
       createdAt: createdAt ?? this.createdAt,
       rowid: rowid ?? this.rowid,
@@ -4192,6 +4467,15 @@ class ReceiptsCompanion extends UpdateCompanion<Receipt> {
     }
     if (filePath.present) {
       map['file_path'] = Variable<String>(filePath.value);
+    }
+    if (fileName.present) {
+      map['file_name'] = Variable<String>(fileName.value);
+    }
+    if (fileSize.present) {
+      map['file_size'] = Variable<int>(fileSize.value);
+    }
+    if (hash.present) {
+      map['hash'] = Variable<String>(hash.value);
     }
     if (mime.present) {
       map['mime'] = Variable<String>(mime.value);
@@ -4211,6 +4495,9 @@ class ReceiptsCompanion extends UpdateCompanion<Receipt> {
           ..write('id: $id, ')
           ..write('transactionId: $transactionId, ')
           ..write('filePath: $filePath, ')
+          ..write('fileName: $fileName, ')
+          ..write('fileSize: $fileSize, ')
+          ..write('hash: $hash, ')
           ..write('mime: $mime, ')
           ..write('createdAt: $createdAt, ')
           ..write('rowid: $rowid')
@@ -4990,6 +5277,7 @@ typedef $$PersonsTableCreateCompanionBuilder =
       required String id,
       required String name,
       required String kind,
+      Value<String?> code,
       Value<String?> note,
       Value<bool> isActive,
       Value<int> rowid,
@@ -5001,6 +5289,7 @@ typedef $$PersonsTableUpdateCompanionBuilder =
       Value<String> id,
       Value<String> name,
       Value<String> kind,
+      Value<String?> code,
       Value<String?> note,
       Value<bool> isActive,
       Value<int> rowid,
@@ -5078,6 +5367,11 @@ class $$PersonsTableFilterComposer
 
   ColumnFilters<String> get kind => $composableBuilder(
     column: $table.kind,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get code => $composableBuilder(
+    column: $table.code,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -5176,6 +5470,11 @@ class $$PersonsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get code => $composableBuilder(
+    column: $table.code,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get note => $composableBuilder(
     column: $table.note,
     builder: (column) => ColumnOrderings(column),
@@ -5210,6 +5509,9 @@ class $$PersonsTableAnnotationComposer
 
   GeneratedColumn<String> get kind =>
       $composableBuilder(column: $table.kind, builder: (column) => column);
+
+  GeneratedColumn<String> get code =>
+      $composableBuilder(column: $table.code, builder: (column) => column);
 
   GeneratedColumn<String> get note =>
       $composableBuilder(column: $table.note, builder: (column) => column);
@@ -5304,6 +5606,7 @@ class $$PersonsTableTableManager
                 Value<String> id = const Value.absent(),
                 Value<String> name = const Value.absent(),
                 Value<String> kind = const Value.absent(),
+                Value<String?> code = const Value.absent(),
                 Value<String?> note = const Value.absent(),
                 Value<bool> isActive = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -5313,6 +5616,7 @@ class $$PersonsTableTableManager
                 id: id,
                 name: name,
                 kind: kind,
+                code: code,
                 note: note,
                 isActive: isActive,
                 rowid: rowid,
@@ -5324,6 +5628,7 @@ class $$PersonsTableTableManager
                 required String id,
                 required String name,
                 required String kind,
+                Value<String?> code = const Value.absent(),
                 Value<String?> note = const Value.absent(),
                 Value<bool> isActive = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -5333,6 +5638,7 @@ class $$PersonsTableTableManager
                 id: id,
                 name: name,
                 kind: kind,
+                code: code,
                 note: note,
                 isActive: isActive,
                 rowid: rowid,
@@ -5960,6 +6266,7 @@ typedef $$CategoriesTableCreateCompanionBuilder =
       required String id,
       required String name,
       required String kind,
+      Value<String?> code,
       Value<int> rowid,
     });
 typedef $$CategoriesTableUpdateCompanionBuilder =
@@ -5969,6 +6276,7 @@ typedef $$CategoriesTableUpdateCompanionBuilder =
       Value<String> id,
       Value<String> name,
       Value<String> kind,
+      Value<String?> code,
       Value<int> rowid,
     });
 
@@ -6026,6 +6334,11 @@ class $$CategoriesTableFilterComposer
 
   ColumnFilters<String> get kind => $composableBuilder(
     column: $table.kind,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get code => $composableBuilder(
+    column: $table.code,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -6088,6 +6401,11 @@ class $$CategoriesTableOrderingComposer
     column: $table.kind,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get code => $composableBuilder(
+    column: $table.code,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$CategoriesTableAnnotationComposer
@@ -6113,6 +6431,9 @@ class $$CategoriesTableAnnotationComposer
 
   GeneratedColumn<String> get kind =>
       $composableBuilder(column: $table.kind, builder: (column) => column);
+
+  GeneratedColumn<String> get code =>
+      $composableBuilder(column: $table.code, builder: (column) => column);
 
   Expression<T> transactionsRefs<T extends Object>(
     Expression<T> Function($$TransactionsTableAnnotationComposer a) f,
@@ -6173,6 +6494,7 @@ class $$CategoriesTableTableManager
                 Value<String> id = const Value.absent(),
                 Value<String> name = const Value.absent(),
                 Value<String> kind = const Value.absent(),
+                Value<String?> code = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => CategoriesCompanion(
                 createdAt: createdAt,
@@ -6180,6 +6502,7 @@ class $$CategoriesTableTableManager
                 id: id,
                 name: name,
                 kind: kind,
+                code: code,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -6189,6 +6512,7 @@ class $$CategoriesTableTableManager
                 required String id,
                 required String name,
                 required String kind,
+                Value<String?> code = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => CategoriesCompanion.insert(
                 createdAt: createdAt,
@@ -6196,6 +6520,7 @@ class $$CategoriesTableTableManager
                 id: id,
                 name: name,
                 kind: kind,
+                code: code,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -6262,6 +6587,7 @@ typedef $$CashAccountsTableCreateCompanionBuilder =
       required String id,
       required String name,
       required String kind,
+      Value<String?> code,
       Value<String?> holderPersonId,
       Value<int> rowid,
     });
@@ -6272,6 +6598,7 @@ typedef $$CashAccountsTableUpdateCompanionBuilder =
       Value<String> id,
       Value<String> name,
       Value<String> kind,
+      Value<String?> code,
       Value<String?> holderPersonId,
       Value<int> rowid,
     });
@@ -6329,6 +6656,11 @@ class $$CashAccountsTableFilterComposer
 
   ColumnFilters<String> get kind => $composableBuilder(
     column: $table.kind,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get code => $composableBuilder(
+    column: $table.code,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -6390,6 +6722,11 @@ class $$CashAccountsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get code => $composableBuilder(
+    column: $table.code,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$PersonsTableOrderingComposer get holderPersonId {
     final $$PersonsTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -6437,6 +6774,9 @@ class $$CashAccountsTableAnnotationComposer
 
   GeneratedColumn<String> get kind =>
       $composableBuilder(column: $table.kind, builder: (column) => column);
+
+  GeneratedColumn<String> get code =>
+      $composableBuilder(column: $table.code, builder: (column) => column);
 
   $$PersonsTableAnnotationComposer get holderPersonId {
     final $$PersonsTableAnnotationComposer composer = $composerBuilder(
@@ -6495,6 +6835,7 @@ class $$CashAccountsTableTableManager
                 Value<String> id = const Value.absent(),
                 Value<String> name = const Value.absent(),
                 Value<String> kind = const Value.absent(),
+                Value<String?> code = const Value.absent(),
                 Value<String?> holderPersonId = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => CashAccountsCompanion(
@@ -6503,6 +6844,7 @@ class $$CashAccountsTableTableManager
                 id: id,
                 name: name,
                 kind: kind,
+                code: code,
                 holderPersonId: holderPersonId,
                 rowid: rowid,
               ),
@@ -6513,6 +6855,7 @@ class $$CashAccountsTableTableManager
                 required String id,
                 required String name,
                 required String kind,
+                Value<String?> code = const Value.absent(),
                 Value<String?> holderPersonId = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => CashAccountsCompanion.insert(
@@ -6521,6 +6864,7 @@ class $$CashAccountsTableTableManager
                 id: id,
                 name: name,
                 kind: kind,
+                code: code,
                 holderPersonId: holderPersonId,
                 rowid: rowid,
               ),
@@ -8883,6 +9227,9 @@ typedef $$ReceiptsTableCreateCompanionBuilder =
       required String id,
       required String transactionId,
       required String filePath,
+      Value<String?> fileName,
+      Value<int?> fileSize,
+      Value<String?> hash,
       required String mime,
       Value<String> createdAt,
       Value<int> rowid,
@@ -8892,6 +9239,9 @@ typedef $$ReceiptsTableUpdateCompanionBuilder =
       Value<String> id,
       Value<String> transactionId,
       Value<String> filePath,
+      Value<String?> fileName,
+      Value<int?> fileSize,
+      Value<String?> hash,
       Value<String> mime,
       Value<String> createdAt,
       Value<int> rowid,
@@ -8935,6 +9285,21 @@ class $$ReceiptsTableFilterComposer
 
   ColumnFilters<String> get filePath => $composableBuilder(
     column: $table.filePath,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get fileName => $composableBuilder(
+    column: $table.fileName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get fileSize => $composableBuilder(
+    column: $table.fileSize,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get hash => $composableBuilder(
+    column: $table.hash,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -8991,6 +9356,21 @@ class $$ReceiptsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get fileName => $composableBuilder(
+    column: $table.fileName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get fileSize => $composableBuilder(
+    column: $table.fileSize,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get hash => $composableBuilder(
+    column: $table.hash,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get mime => $composableBuilder(
     column: $table.mime,
     builder: (column) => ColumnOrderings(column),
@@ -9039,6 +9419,15 @@ class $$ReceiptsTableAnnotationComposer
 
   GeneratedColumn<String> get filePath =>
       $composableBuilder(column: $table.filePath, builder: (column) => column);
+
+  GeneratedColumn<String> get fileName =>
+      $composableBuilder(column: $table.fileName, builder: (column) => column);
+
+  GeneratedColumn<int> get fileSize =>
+      $composableBuilder(column: $table.fileSize, builder: (column) => column);
+
+  GeneratedColumn<String> get hash =>
+      $composableBuilder(column: $table.hash, builder: (column) => column);
 
   GeneratedColumn<String> get mime =>
       $composableBuilder(column: $table.mime, builder: (column) => column);
@@ -9101,6 +9490,9 @@ class $$ReceiptsTableTableManager
                 Value<String> id = const Value.absent(),
                 Value<String> transactionId = const Value.absent(),
                 Value<String> filePath = const Value.absent(),
+                Value<String?> fileName = const Value.absent(),
+                Value<int?> fileSize = const Value.absent(),
+                Value<String?> hash = const Value.absent(),
                 Value<String> mime = const Value.absent(),
                 Value<String> createdAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -9108,6 +9500,9 @@ class $$ReceiptsTableTableManager
                 id: id,
                 transactionId: transactionId,
                 filePath: filePath,
+                fileName: fileName,
+                fileSize: fileSize,
+                hash: hash,
                 mime: mime,
                 createdAt: createdAt,
                 rowid: rowid,
@@ -9117,6 +9512,9 @@ class $$ReceiptsTableTableManager
                 required String id,
                 required String transactionId,
                 required String filePath,
+                Value<String?> fileName = const Value.absent(),
+                Value<int?> fileSize = const Value.absent(),
+                Value<String?> hash = const Value.absent(),
                 required String mime,
                 Value<String> createdAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -9124,6 +9522,9 @@ class $$ReceiptsTableTableManager
                 id: id,
                 transactionId: transactionId,
                 filePath: filePath,
+                fileName: fileName,
+                fileSize: fileSize,
+                hash: hash,
                 mime: mime,
                 createdAt: createdAt,
                 rowid: rowid,

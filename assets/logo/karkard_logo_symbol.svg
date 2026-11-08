@@ -1,0 +1,100 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <!-- Background Gradient -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#F8FAFC"/>
+    </linearGradient>
+
+    <!-- Deep Teal Brand Gradient -->
+    <linearGradient id="tealGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00695C"/>
+      <stop offset="50%" stop-color="#004D40"/>
+      <stop offset="100%" stop-color="#042F2C"/>
+    </linearGradient>
+
+    <!-- Secondary Teal Accent -->
+    <linearGradient id="tealLightGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#26A69A"/>
+      <stop offset="100%" stop-color="#00897B"/>
+    </linearGradient>
+
+    <!-- Construction Golden Amber Gradient -->
+    <linearGradient id="amberGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FBBF24"/>
+      <stop offset="60%" stop-color="#F59E0B"/>
+      <stop offset="100%" stop-color="#D97706"/>
+    </linearGradient>
+
+    <!-- Soft Drop Shadow -->
+    <filter id="subtleShadow" x="-10%" y="-10%" width="125%" height="125%">
+      <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#004D40" flood-opacity="0.15"/>
+    </filter>
+    <filter id="amberGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="6" stdDeviation="10" flood-color="#F59E0B" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+
+  <!-- Clean Base Background -->
+  <rect width="512" height="512" rx="108" fill="url(#bgGrad)"/>
+  
+  <!-- Subtle Outer Precision Ring -->
+  <circle cx="256" cy="256" r="216" fill="none" stroke="#E2E8F0" stroke-width="2" stroke-dasharray="6 6"/>
+
+  <g filter="url(#subtleShadow)">
+    <!-- 1. BASE: Architectural Foundation & Ledger Platform (قوام و پایداری حساب) -->
+    <path d="M128 384 L384 384 C395 384 402 372 396 362 L368 316 C364 310 357 306 350 306 L162 306 C155 306 148 310 144 316 L116 362 C110 372 117 384 128 384 Z" 
+          fill="url(#tealGrad)"/>
+
+    <!-- Ledger Precision Rule Lines (خطوط تراز و دفتر) -->
+    <rect x="180" y="338" width="152" height="6" rx="3" fill="#80CBC4" opacity="0.8"/>
+    <rect x="206" y="356" width="100" height="5" rx="2.5" fill="#80CBC4" opacity="0.5"/>
+
+    <!-- 2. CRANE BOOM & TOWER: Sharp Architectural Diagonal (بوم قدرتمند جرثقیل و خط صعود مالی) -->
+    <!-- Main Triangular Mast Pillar -->
+    <path d="M196 306 L278 108 C282 98 296 98 300 108 L348 306 Z" 
+          fill="url(#tealLightGrad)" opacity="0.25"/>
+
+    <!-- Dynamic Heavy Crane Boom (بازوی زاویه‌دار جرثقیل به شکل صعود مالی) -->
+    <path d="M172 312 L356 128 C364 120 378 123 382 134 L386 146 C390 157 386 169 376 177 L206 324 C194 334 176 328 172 312 Z" 
+          fill="url(#tealGrad)"/>
+
+    <!-- Crane Boom Internal Lattice Structure (مهاربندهای هندسی بوم) -->
+    <line x1="220" y1="280" x2="250" y2="225" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round" opacity="0.85"/>
+    <line x1="250" y1="225" x2="295" y2="200" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round" opacity="0.85"/>
+    <line x1="295" y1="200" x2="330" y2="150" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round" opacity="0.85"/>
+
+    <!-- 3. TOP PULLEY HEAD & CABLE (قرقره فوقانی و کابل تعادل) -->
+    <circle cx="368" cy="144" r="26" fill="url(#tealGrad)" stroke="#FFFFFF" stroke-width="6"/>
+    <circle cx="368" cy="144" r="12" fill="url(#amberGrad)"/>
+
+    <!-- Vertical Hoist Cable (کابل عمودی کشش و میزان) -->
+    <line x1="368" y1="170" x2="368" y2="250" stroke="#004D40" stroke-width="5" stroke-dasharray="8 4"/>
+
+    <!-- 4. GOLDEN HOOK & SCALE WEIGHT: The Symbol of Wealth & Equilibrium (قلاب زرین و وزنه تعادل تراز) -->
+    <g filter="url(#amberGlow)">
+      <!-- Swivel Block -->
+      <rect x="352" y="246" width="32" height="20" rx="5" fill="url(#amberGrad)"/>
+      <circle cx="368" cy="256" r="4" fill="#FFFFFF"/>
+      
+      <!-- Sleek Geometric Crane Hook forming mathematical checkmark/balance -->
+      <path d="M368 266 
+               C368 284 356 298 338 298 
+               C320 298 308 284 308 268 
+               C308 256 316 248 326 248 
+               C334 248 340 254 340 262 
+               C340 270 334 274 326 274
+               C326 280 332 284 338 284
+               C346 284 354 276 354 266 Z" 
+            fill="url(#amberGrad)"/>
+
+      <!-- Golden Coin / Equilibrium Indicator (سکه طلایی نماد برکت و سود) -->
+      <circle cx="338" cy="270" r="16" fill="url(#amberGrad)" stroke="#FFFFFF" stroke-width="3"/>
+      <circle cx="338" cy="270" r="10" fill="none" stroke="#FFFFFF" stroke-width="1.5" stroke-dasharray="3 3"/>
+    </g>
+
+    <!-- 5. CENTRAL ACCENT: Modern Delta Apex (مثلث تعادل) -->
+    <polygon points="216,306 256,220 296,306" fill="url(#amberGrad)" opacity="0.95"/>
+    <circle cx="256" cy="265" r="7" fill="#FFFFFF"/>
+  </g>
+</svg>

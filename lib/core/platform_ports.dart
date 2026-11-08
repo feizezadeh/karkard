@@ -31,3 +31,9 @@ abstract interface class BackupLocationService {
   /// User-facing export/transfer (desktop: copy to folder; Android: share).
   Future<void> exportBackup(String fileName, Uint8List bytes);
 }
+
+/// Directory picker interface for selecting custom backup folders.
+abstract interface class DirectoryPicker {
+  Future<String?> pickDirectory();
+}
+

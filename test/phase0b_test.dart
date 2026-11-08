@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:drift/drift.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sqlite3/sqlite3.dart' show SqliteException;
 import 'package:karkard/core/jalali.dart';
 import 'package:karkard/core/money.dart';
 import 'package:karkard/data/database.dart';
@@ -162,6 +163,9 @@ void main() {
         'trg_project_persons_no_update_pk_with_tx',
         'trg_project_persons_no_delete_with_tx',
         'trg_persons_no_update_kind_with_tx',
+        'trg_pp_check_person_kind_settlement_mode_insert',
+        'trg_pp_check_person_kind_settlement_mode_update',
+        'trg_persons_check_kind_with_project_persons_update',
         'trg_app_settings_no_update_key',
         'trg_app_settings_unit_immutable',
         'trg_app_settings_unit_no_delete',
@@ -189,18 +193,17 @@ void main() {
       // Raw SQL check with real float 12.5 -> must fail CHECK (typeof(amount)='integer')
       expect(
         db.customStatement(
-          "INSERT INTO transactions (id, project_id, type, amount, date, cash_account_id, client_id) VALUES ('t_flt', 'open1', 'income', 12.5, '2025-03-20', 'c1', 'cli')",
+          "INSERT INTO transactions (id, project_id, type, amount, date, cash_account_id, client_id, created_at, updated_at) VALUES ('t_flt', 'open1', 'income', 12.5, '2025-03-20', 'c1', 'cli', 1, 1)",
         ),
-        throwsA(anything),
+        throwsA(isA<SqliteException>().having((e) => e.toString(), 'message', contains('chk_tx_amount_type'))),
       );
 
-      // Raw SQL check with text '100' -> must fail CHECK (typeof(amount)='integer')
-      expect(
-        db.customStatement(
-          "INSERT INTO transactions (id, project_id, type, amount, date, cash_account_id, client_id) VALUES ('t_str', 'open1', 'income', '100', '2025-03-20', 'c1', 'cli')",
-        ),
-        throwsA(anything),
+      // Raw SQL check with text '100' -> coerced to integer 100 by column integer affinity, succeeds
+      await db.customStatement(
+        "INSERT INTO transactions (id, project_id, type, amount, date, cash_account_id, client_id, created_at, updated_at) VALUES ('t_str', 'open1', 'income', '100', '2025-03-20', 'c1', 'cli', 1, 1)",
       );
+      final rowStr = await (db.select(db.transactions)..where((t) => t.id.equals('t_str'))).getSingle();
+      expect(rowStr.amount, 100);
     });
   });
 
@@ -219,12 +222,12 @@ void main() {
 
       expect(
         db.customStatement("UPDATE audit_log SET action='tampered' WHERE id='l1'"),
-        throwsA(anything),
+        throwsA(isA<SqliteException>().having((e) => e.toString(), 'message', contains('audit_log is append-only: UPDATE is forbidden'))),
       );
 
       expect(
         db.customStatement("DELETE FROM audit_log WHERE id='l1'"),
-        throwsA(anything),
+        throwsA(isA<SqliteException>().having((e) => e.toString(), 'message', contains('audit_log is append-only: DELETE is forbidden'))),
       );
     });
   });
@@ -251,13 +254,13 @@ void main() {
       expect(
         db.into(db.receipts).insert(ReceiptsCompanion.insert(
             id: 'r2', transactionId: 'tx_open', filePath: '/path/2.png', mime: 'image/png')),
-        throwsA(anything),
+        throwsA(isA<SqliteException>().having((e) => e.toString(), 'message', contains('cannot add receipt to a transaction in a locked project'))),
       );
 
       // Deleting existing receipt now throws
       expect(
         db.customStatement("DELETE FROM receipts WHERE id='r1'"),
-        throwsA(anything),
+        throwsA(isA<SqliteException>().having((e) => e.toString(), 'message', contains('cannot delete receipt from a transaction in a locked project'))),
       );
 
       // Unlock project -> delete succeeds
@@ -277,8 +280,10 @@ void main() {
 
     test('lock a) moving tx from open to locked project throws', () async {
       await tx(db, 't1', 'open1');
-      expect(db.customStatement("UPDATE transactions SET project_id='lock1' WHERE id='t1'"),
-          throwsA(anything));
+      expect(
+        db.customStatement("UPDATE transactions SET project_id='lock1' WHERE id='t1'"),
+        throwsA(isA<SqliteException>().having((e) => e.toString(), 'message', contains('ERR_PROJECT_LOCKED_TX'))),
+      );
     });
     test('lock b) unlocking project succeeds, then tx edit succeeds', () async {
       await tx(db, 't1', 'open1');
@@ -289,7 +294,10 @@ void main() {
       expect(r.amount, 7);
     });
     test('lock d) insert tx in locked project throws', () async {
-      expect(tx(db, 't9', 'lock1'), throwsA(anything));
+      expect(
+        tx(db, 't9', 'lock1'),
+        throwsA(isA<SqliteException>().having((e) => e.toString(), 'message', contains('ERR_PROJECT_LOCKED_TX'))),
+      );
     });
     test('lock e) editing amount in locked project throws', () async {
       // First insert while open
@@ -299,7 +307,7 @@ void main() {
       // Editing amount must throw
       expect(
         db.customStatement("UPDATE transactions SET amount=9999 WHERE id='t_to_lock'"),
-        throwsA(anything),
+        throwsA(isA<SqliteException>().having((e) => e.toString(), 'message', contains('ERR_PROJECT_LOCKED_TX'))),
       );
     });
     test('lock f) soft-deleting tx in locked project throws', () async {
@@ -310,7 +318,7 @@ void main() {
       // Soft-deleting must throw
       expect(
         db.customStatement("UPDATE transactions SET deleted_at='2025-03-20T10:00:00Z', deleted_reason='test' WHERE id='t_soft_lock'"),
-        throwsA(anything),
+        throwsA(isA<SqliteException>().having((e) => e.toString(), 'message', contains('ERR_PROJECT_LOCKED_TX'))),
       );
     });
   });
@@ -324,14 +332,23 @@ void main() {
     tearDown(() => db.close());
 
     test('date: 2026-13-45 rejected', () async {
-      expect(tx(db, 'x', 'open1', date: '2026-13-45'), throwsA(anything));
+      expect(
+        tx(db, 'x', 'open1', date: '2026-13-45'),
+        throwsA(isA<SqliteException>().having((e) => e.toString(), 'message', contains('chk_tx_date_format'))),
+      );
     });
     test('date: 2026-02-30 rejected', () async {
-      expect(tx(db, 'x', 'open1', date: '2026-02-30'), throwsA(anything));
+      expect(
+        tx(db, 'x', 'open1', date: '2026-02-30'),
+        throwsA(isA<SqliteException>().having((e) => e.toString(), 'message', contains('chk_tx_date_format'))),
+      );
     });
     test('date: valid 2024-02-29 accepted, 2025-02-29 rejected', () async {
       await tx(db, 'ok', 'open1', date: '2024-02-29');
-      expect(tx(db, 'x', 'open1', date: '2025-02-29'), throwsA(anything));
+      expect(
+        tx(db, 'x', 'open1', date: '2025-02-29'),
+        throwsA(isA<SqliteException>().having((e) => e.toString(), 'message', contains('chk_tx_date_format'))),
+      );
     });
   });
 

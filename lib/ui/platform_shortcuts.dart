@@ -37,6 +37,10 @@ class NewTxButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) => isDesktop
       ? const SizedBox.shrink()
-      : FloatingActionButton(
-          onPressed: onPressed, tooltip: 'تراکنش جدید', child: const Icon(Icons.add));
+      : FloatingActionButton.extended(
+          onPressed: onPressed,
+          tooltip: 'تراکنش جدید',
+          icon: const Icon(Icons.add),
+          label: const Text('تراکنش جدید', style: TextStyle(fontWeight: FontWeight.bold)),
+        );
 }
